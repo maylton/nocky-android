@@ -62,14 +62,20 @@ import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
+import java.net.SocketTimeoutException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
 private const val NOCKY_CONNECT_RECEIVE_TIMEOUT_MS = 15_000L
+private const val NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS = 60_000L
 private const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = 45_000L
 private const val NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS = 2_000L
+
+private val ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE = AtomicBoolean(false)
+private val ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE = AtomicBoolean(false)
 
 private enum class AndroidNockyConnectDiscoveryMode {
     SEND,
@@ -114,8 +120,9 @@ private fun NockyConnectPlayerSurface(
     var statusText by remember { mutableStateOf("Scanning for nearby devices…") }
 
     fun refreshDevices() {
+        startAndroidNockyConnectPresenceWindow(appContext, playerConnection)
         isScanning = true
-        statusText = "Scanning for nearby devices…"
+        statusText = "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
         scanAndroidNockyConnectDevices(appContext) { result, error ->
             isScanning = false
             if (error != null) {
@@ -125,7 +132,7 @@ private fun NockyConnectPlayerSurface(
                 val found = result.orEmpty()
                 devices = found
                 statusText = when (found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
-                    0 -> "No desktop found yet. Keep Nocky Connect open on Desktop and scan again."
+                    0 -> "No desktop found yet. Android stays visible for Desktop for 60 seconds."
                     1 -> "1 desktop available"
                     else -> "Multiple desktops available"
                 }
@@ -331,6 +338,40 @@ private fun scanAndroidNockyConnectDevices(
     }.start()
 }
 
+private fun startAndroidNockyConnectPresenceWindow(
+    context: Context,
+    playerConnection: PlayerConnection?,
+) {
+    val appContext = context.applicationContext
+    if (!ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.compareAndSet(false, true)) {
+        return
+    }
+
+    Thread {
+        try {
+            val descriptor = buildAndroidNockyConnectDescriptor(
+                context = appContext,
+                advertiseHandoffEndpoint = true,
+            )
+            startAndroidHandoffReceiver(
+                context = appContext,
+                localDeviceId = descriptor.deviceId,
+                playerConnection = playerConnection,
+                silentTimeout = true,
+            )
+            NockyConnectUdpDiscovery.receiveOnce(
+                localDescriptor = descriptor,
+                timeoutMs = NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS,
+            )
+        } catch (_: Exception) {
+            // Presence is opportunistic: regular foreground scans still report
+            // actionable discovery errors to the surface.
+        } finally {
+            ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.set(false)
+        }
+    }.start()
+}
+
 private fun sendAndroidSnapshotToSelectedDesktop(
     context: Context,
     playerConnection: PlayerConnection?,
@@ -376,32 +417,36 @@ private fun runAndroidNockyConnectDiscovery(
             if (mode == AndroidNockyConnectDiscoveryMode.RECEIVE) {
                 startAndroidHandoffReceiver(appContext, descriptor.deviceId, playerConnection)
             }
-            val devices = when (mode) {
-                AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
-                    localDescriptor = descriptor,
-                    timeoutMs = NOCKY_CONNECT_SEND_TIMEOUT_MS,
-                )
-                AndroidNockyConnectDiscoveryMode.RECEIVE -> NockyConnectUdpDiscovery.receiveOnce(
-                    localDescriptor = descriptor,
-                    timeoutMs = NOCKY_CONNECT_RECEIVE_TIMEOUT_MS,
-                )
-            }
-            if (devices.isEmpty()) {
-                when (mode) {
-                    AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: no devices found"
-                    AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: no desktop tried to connect"
-                }
-            } else if (mode == AndroidNockyConnectDiscoveryMode.SEND) {
-                sendAndroidSnapshotToDesktop(
-                    localDescriptor = descriptor,
-                    playerConnection = playerConnection,
-                    devices = devices,
-                )
+            if (mode == AndroidNockyConnectDiscoveryMode.RECEIVE && ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.get()) {
+                "Nocky Connect: this device is already available for Desktop"
             } else {
-                val names = devices
-                    .take(3)
-                    .joinToString { device -> device.descriptor.deviceName }
-                "Nocky Connect: found ${devices.size} device(s): $names"
+                val devices = when (mode) {
+                    AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
+                        localDescriptor = descriptor,
+                        timeoutMs = NOCKY_CONNECT_SEND_TIMEOUT_MS,
+                    )
+                    AndroidNockyConnectDiscoveryMode.RECEIVE -> NockyConnectUdpDiscovery.receiveOnce(
+                        localDescriptor = descriptor,
+                        timeoutMs = NOCKY_CONNECT_RECEIVE_TIMEOUT_MS,
+                    )
+                }
+                if (devices.isEmpty()) {
+                    when (mode) {
+                        AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: no devices found"
+                        AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: no desktop tried to connect"
+                    }
+                } else if (mode == AndroidNockyConnectDiscoveryMode.SEND) {
+                    sendAndroidSnapshotToDesktop(
+                        localDescriptor = descriptor,
+                        playerConnection = playerConnection,
+                        devices = devices,
+                    )
+                } else {
+                    val names = devices
+                        .take(3)
+                        .joinToString { device -> device.descriptor.deviceName }
+                    "Nocky Connect: found ${devices.size} device(s): $names"
+                }
             }
         } catch (error: Exception) {
             "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}"
@@ -517,7 +562,15 @@ private fun startAndroidHandoffReceiver(
     context: Context,
     localDeviceId: String,
     playerConnection: PlayerConnection?,
+    silentTimeout: Boolean = false,
 ) {
+    if (!ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE.compareAndSet(false, true)) {
+        if (!silentTimeout) {
+            showNockyConnectToast(context, "Nocky Connect: this device is already available for Desktop")
+        }
+        return
+    }
+
     Thread {
         val message = try {
             val received = NockyConnectHandoffHttpReceiver.receiveOfferAndSnapshot(
@@ -541,9 +594,17 @@ private fun startAndroidHandoffReceiver(
                 "Nocky Connect: pending restore saved · ${summary.title} · ${summary.itemCount} items"
             }
         } catch (error: Exception) {
-            "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
+            if (silentTimeout && error is SocketTimeoutException) {
+                null
+            } else {
+                "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
+            }
+        } finally {
+            ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE.set(false)
         }
-        showNockyConnectToast(context, message)
+        if (message != null) {
+            showNockyConnectToast(context, message)
+        }
     }.start()
 }
 
