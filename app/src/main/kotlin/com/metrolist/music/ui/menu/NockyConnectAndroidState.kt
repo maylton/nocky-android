@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.metrolist.music.R
 import com.metrolist.music.connect.NOCKY_CONNECT_HANDOFF_PORT
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
@@ -66,30 +67,38 @@ internal fun pruneAndroidNockyConnectDeviceCache(): List<AndroidNockyConnectCach
 }
 
 internal fun androidNockyConnectDeviceSubtitle(
+    context: Context,
     cached: AndroidNockyConnectCachedDevice,
     isConnecting: Boolean = false,
     hasFailed: Boolean = false,
 ): String {
-    val platform = androidNockyConnectPlatformLabel(cached.device.descriptor.platform)
+    val platform = androidNockyConnectPlatformLabel(context, cached.device.descriptor.platform)
     if (isConnecting) {
-        return "$platform · connecting…"
+        return context.getString(R.string.nocky_connect_subtitle_connecting, platform)
     }
     if (hasFailed) {
-        return "$platform · failed to connect · scan again or check Desktop"
+        return context.getString(R.string.nocky_connect_subtitle_failed, platform)
     }
 
     val ageMs = (System.currentTimeMillis() - cached.lastSeenEpochMs).coerceAtLeast(0L)
     return if (ageMs <= NOCKY_CONNECT_DEVICE_AVAILABLE_NOW_MS) {
-        "$platform · available now · tap to move playback"
+        context.getString(R.string.nocky_connect_subtitle_available_now, platform)
     } else {
-        "$platform · recently seen · last seen ${androidNockyConnectRelativeAge(ageMs)} ago · tap to try moving playback"
+        context.getString(
+            R.string.nocky_connect_subtitle_recently_seen,
+            platform,
+            androidNockyConnectRelativeAge(ageMs),
+        )
     }
 }
 
-internal fun androidNockyConnectPlatformLabel(platform: NockyConnectDevicePlatform): String = when (platform) {
-    NockyConnectDevicePlatform.ANDROID -> "Android"
-    NockyConnectDevicePlatform.LINUX_DESKTOP -> "Linux desktop"
-    NockyConnectDevicePlatform.UNKNOWN -> "Unknown device"
+internal fun androidNockyConnectPlatformLabel(
+    context: Context,
+    platform: NockyConnectDevicePlatform,
+): String = when (platform) {
+    NockyConnectDevicePlatform.ANDROID -> context.getString(R.string.nocky_connect_platform_android)
+    NockyConnectDevicePlatform.LINUX_DESKTOP -> context.getString(R.string.nocky_connect_platform_linux_desktop)
+    NockyConnectDevicePlatform.UNKNOWN -> context.getString(R.string.nocky_connect_platform_unknown)
 }
 
 internal fun androidNockyConnectRelativeAge(ageMs: Long): String {
@@ -108,7 +117,7 @@ internal fun buildAndroidNockyConnectDescriptor(
     advertiseHandoffEndpoint: Boolean,
 ): NockyConnectDeviceDescriptor = NockyConnectDeviceDescriptor(
     deviceId = context.getOrCreateNockyConnectDeviceId(),
-    deviceName = androidDeviceName(),
+    deviceName = androidDeviceName(context),
     platform = NockyConnectDevicePlatform.ANDROID,
     appName = "Nocky Android",
     appVersion = null,
@@ -131,8 +140,8 @@ internal fun showNockyConnectToast(
     }
 }
 
-internal fun androidDeviceName(): String =
+internal fun androidDeviceName(context: Context): String =
     listOf(Build.MANUFACTURER, Build.MODEL)
         .filter { value -> value.isNotBlank() }
         .joinToString(" ")
-        .ifBlank { "Android device" }
+        .ifBlank { context.getString(R.string.nocky_connect_default_android_device) }
