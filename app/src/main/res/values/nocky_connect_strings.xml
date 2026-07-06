@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nocky_connect_surface_desc">Move playback between this phone and Nocky Desktop on your local network.</string>
+    <string name="nocky_connect_send_to_desktop">Send to desktop</string>
+    <string name="nocky_connect_send_to_desktop_desc">Export the current queue and position to a trusted Nocky Desktop.</string>
+    <string name="nocky_connect_receive_from_desktop">Receive from desktop</string>
+    <string name="nocky_connect_receive_from_desktop_desc">Prepare this phone to import a paused desktop session.</string>
+</resources>
