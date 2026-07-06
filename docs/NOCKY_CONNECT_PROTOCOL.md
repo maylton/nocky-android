@@ -6,7 +6,7 @@ This repository is still intentionally kept close to upstream Metrolist. Rebrand
 
 ## Goal
 
-The first goal is to export the Android player state into a portable JSON snapshot that Nocky Desktop can understand.
+The first goal is to convert the Android player state to and from a portable JSON snapshot that Nocky Desktop can understand.
 
 The snapshot contains:
 
@@ -30,14 +30,15 @@ The snapshot must not contain:
 
 ## Current implementation phase
 
-This PR implements the Android export foundation only:
+This PR implements the Android snapshot foundation only:
 
 - serializable Nocky Connect protocol models;
 - JSON codec;
-- mapper from `PersistQueue` and `PersistPlayerState`;
-- unit tests for queue export, JSON round-trip and privacy boundaries.
+- export mapper from `PersistQueue` and `PersistPlayerState` to `PlaybackSessionSnapshot`;
+- restore mapper from `PlaybackSessionSnapshot` back to `PersistQueue` and paused `PersistPlayerState`;
+- unit tests for queue export, JSON round-trip, local best-effort identity and paused restore.
 
-It does not implement networking, QR pairing, WebSocket sync, import/restore, UI actions, foreground services or desktop-side code.
+It does not implement networking, QR pairing, WebSocket sync, UI actions, foreground services, automatic playback handoff or desktop-side code.
 
 ## Portable snapshot shape
 
@@ -86,9 +87,20 @@ YouTube queue items use:
 
 Local queue items are marked as best-effort and must not be assumed playable on another device unless a future local-library identity resolver confirms they can be resolved.
 
+## Restore behavior
+
+Restoring a snapshot is intentionally conservative:
+
+- the queue is rebuilt from portable metadata;
+- the current index is clamped to the available item range;
+- position, repeat and shuffle state are preserved;
+- the resulting player state is paused even when the remote snapshot was playing.
+
+The actual one-tap handoff flow can later decide when to start playback after the destination resolves the current stream and the source device acknowledges the transfer.
+
 ## Next steps
 
 1. Add a development export entry point that writes the snapshot JSON to a file or share sheet.
-2. Add a matching Android import path that can restore a received snapshot in paused state.
+2. Add a development import entry point that accepts pasted/shared JSON and restores a paused queue.
 3. Implement the equivalent desktop models and importer/exporter.
 4. Add local-network pairing only after manual JSON round trips work both ways.
