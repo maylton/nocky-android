@@ -9,13 +9,22 @@
 package com.metrolist.music.connect
 
 import android.content.Context
+import com.metrolist.music.models.PersistPlayerState
+import com.metrolist.music.models.PersistQueue
 import java.io.File
+import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
 private const val PENDING_RESTORE_DIR = "nocky-connect"
 private const val PENDING_SNAPSHOT_FILE = "pending-restore-snapshot.json"
 private const val PENDING_QUEUE_FILE = "pending-restore-queue.bin"
 private const val PENDING_PLAYER_STATE_FILE = "pending-restore-player-state.bin"
+
+data class NockyConnectPendingRestore(
+    val snapshot: PlaybackSessionSnapshot,
+    val queue: PersistQueue,
+    val playerState: PersistPlayerState,
+)
 
 data class NockyConnectPendingRestoreSummary(
     val title: String,
@@ -35,6 +44,13 @@ object NockyConnectPendingRestoreStore {
         restorePlan = restorePlan,
     )
 
+    fun load(context: Context): NockyConnectPendingRestore? =
+        loadFromDirectory(File(context.filesDir, PENDING_RESTORE_DIR))
+
+    fun clear(context: Context) {
+        clearDirectory(File(context.filesDir, PENDING_RESTORE_DIR))
+    }
+
     internal fun saveToDirectory(
         directory: File,
         snapshot: PlaybackSessionSnapshot,
@@ -51,21 +67,76 @@ object NockyConnectPendingRestoreStore {
             output.writeObject(restorePlan.playerState)
         }
 
-        val safeIndex = restorePlan.queue.mediaItemIndex.coerceIn(
-            0,
-            (restorePlan.queue.items.size - 1).coerceAtLeast(0),
-        )
-        val title = restorePlan.queue.items
-            .getOrNull(safeIndex)
-            ?.title
-            ?: restorePlan.queue.title
-            ?: "queue"
+        return restorePlan.toSummary()
+    }
 
-        return NockyConnectPendingRestoreSummary(
-            title = title,
-            itemCount = restorePlan.queue.items.size,
-            currentIndex = safeIndex,
-            positionMs = restorePlan.playerState.currentPosition.coerceAtLeast(0L),
+    internal fun loadFromDirectory(directory: File): NockyConnectPendingRestore? {
+        val snapshotFile = File(directory, PENDING_SNAPSHOT_FILE)
+        val queueFile = File(directory, PENDING_QUEUE_FILE)
+        val playerStateFile = File(directory, PENDING_PLAYER_STATE_FILE)
+        if (!snapshotFile.isFile || !queueFile.isFile || !playerStateFile.isFile) {
+            return null
+        }
+
+        val snapshot = NockyConnectJson.decodePlaybackSessionSnapshot(snapshotFile.readText())
+        val queue = ObjectInputStream(queueFile.inputStream()).use { input ->
+            input.readObject() as PersistQueue
+        }
+        val playerState = ObjectInputStream(playerStateFile.inputStream()).use { input ->
+            input.readObject() as PersistPlayerState
+        }
+
+        return NockyConnectPendingRestore(
+            snapshot = snapshot,
+            queue = queue,
+            playerState = playerState,
         )
     }
+
+    internal fun clearDirectory(directory: File) {
+        File(directory, PENDING_SNAPSHOT_FILE).delete()
+        File(directory, PENDING_QUEUE_FILE).delete()
+        File(directory, PENDING_PLAYER_STATE_FILE).delete()
+    }
+}
+
+fun NockyConnectRestorePlan.toSummary(): NockyConnectPendingRestoreSummary =
+    pendingRestoreSummary(
+        title = queue.title,
+        itemTitles = queue.items.map { it.title },
+        itemCount = queue.items.size,
+        currentIndex = queue.mediaItemIndex,
+        positionMs = playerState.currentPosition,
+    )
+
+fun NockyConnectPendingRestore.toSummary(): NockyConnectPendingRestoreSummary =
+    pendingRestoreSummary(
+        title = queue.title,
+        itemTitles = queue.items.map { it.title },
+        itemCount = queue.items.size,
+        currentIndex = queue.mediaItemIndex,
+        positionMs = playerState.currentPosition,
+    )
+
+private fun pendingRestoreSummary(
+    title: String?,
+    itemTitles: List<String>,
+    itemCount: Int,
+    currentIndex: Int,
+    positionMs: Long,
+): NockyConnectPendingRestoreSummary {
+    val safeIndex = currentIndex.coerceIn(
+        0,
+        (itemCount - 1).coerceAtLeast(0),
+    )
+    val summaryTitle = itemTitles.getOrNull(safeIndex)
+        ?: title
+        ?: "queue"
+
+    return NockyConnectPendingRestoreSummary(
+        title = summaryTitle,
+        itemCount = itemCount,
+        currentIndex = safeIndex,
+        positionMs = positionMs.coerceAtLeast(0L),
+    )
 }
