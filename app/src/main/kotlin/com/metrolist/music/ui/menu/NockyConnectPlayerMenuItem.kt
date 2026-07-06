@@ -36,7 +36,6 @@ import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
 import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
-import com.metrolist.music.connect.NockyConnectHandoffPayload
 import com.metrolist.music.connect.NockyConnectHandoffTransport
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
@@ -200,13 +199,16 @@ private fun startAndroidHandoffReceiver(
 ) {
     Thread {
         val message = try {
-            val received = NockyConnectHandoffHttpReceiver.receiveOne(
+            val received = NockyConnectHandoffHttpReceiver.receiveOfferAndSnapshot(
                 localDeviceId = localDeviceId,
                 timeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS,
             )
-            val offer = received.envelope.payload as NockyConnectHandoffPayload.Offer
-            val title = offer.snapshotSummary.currentTitle ?: "queue"
-            "Nocky Connect: handoff offer received · $title · ${offer.snapshotSummary.queueItems} items"
+            val title = received.snapshot.queue.items
+                .getOrNull(received.snapshot.queue.currentIndex)
+                ?.title
+                ?: received.snapshot.queue.title
+                ?: "queue"
+            "Nocky Connect: snapshot prepared paused · $title · ${received.restorePlan.queue.items.size} items"
         } catch (error: Exception) {
             "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
         }
