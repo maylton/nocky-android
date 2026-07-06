@@ -18,7 +18,7 @@ This device
 
 Available on your network
 💻 Nocky Desktop
-   Linux desktop · last seen just now
+   Linux desktop · available now
 
 Troubleshooting
 No devices? Check same network and firewall UDP/TCP rules.
@@ -72,10 +72,16 @@ Validated:
   - Desktop accepts;
   - Android transfers snapshot;
   - Desktop applies restore paused.
+- Android device-picker presence states:
+  - Android compile/install passed after the presence-state update;
+  - Desktop rows show `available now` when freshly discovered;
+  - cached Desktop rows show `recently seen` with a relative `last seen` time;
+  - Android -> Desktop handoff remains valid after the UI/cache-state update.
 
 Known implementation notes:
 
 - Android snapshot export must read ExoPlayer state on the main thread.
+- Android handoff receiver timeout is intentionally longer than the short presence window, so Desktop -> Android can still complete during the advertised window.
 - Pending restore remains an internal fallback for received desktop snapshots.
 - Restored queues can still have incomplete artwork/metadata. Metadata hydration is a later polish phase.
 
@@ -92,6 +98,8 @@ Implemented on Android:
 - opening the surface starts a short Android presence window automatically;
 - `Scan again` refreshes the device list and starts a new short presence window;
 - discovered devices are cached in memory for 5 minutes;
+- device rows distinguish `available now` from `recently seen`;
+- recently seen device rows show a relative `last seen` age;
 - failed scans keep recently seen devices visible instead of clearing the list;
 - the old manual `Make this device available for Desktop` action was removed from the UI;
 - old diagnostic `Send / Receive` branching was removed from the Android player surface;
@@ -172,7 +180,8 @@ Keep and build on:
 - pending restore store as an internal Android fallback;
 - Android device picker surface;
 - Android short presence window;
-- Android and Desktop recent-device caches.
+- Android and Desktop recent-device caches;
+- `available now` / `recently seen` row semantics.
 
 Do not reintroduce the old manual `Send / Receive` Android UI as the primary flow. It has been replaced by the device picker.
 
@@ -185,7 +194,7 @@ Continue evolving the device picker with:
 - live device list semantics;
 - clearer device row states:
   - scanning;
-  - available;
+  - available now;
   - recently seen;
   - connecting;
   - waiting for confirmation;
@@ -280,12 +289,13 @@ Done:
 - Android discovered-device cache with last-seen timestamps;
 - device list rendering on both platforms;
 - dedupe by device id;
-- cache expiry after 5 minutes.
+- cache expiry after 5 minutes;
+- Android exposes `available now` vs `recently seen` row states;
+- Android shows relative `last seen` copy for cached devices.
 
 Remaining:
 
-- expose `recently seen` vs `available now` row states;
-- share more naming/status semantics between Android and Desktop;
+- keep row-state wording aligned between Android and Desktop as the UI evolves;
 - persist friendly trusted device names later.
 
 ### Phase 3 - Spotify-style surfaces
@@ -305,7 +315,7 @@ Android:
 - keeps player bottom-sheet entry;
 - uses a live device list instead of two static actions;
 - shows empty/scanning/error states;
-- shows device rows matching the desktop semantics;
+- shows available/recently-seen device row states;
 - starts short presence automatically when the surface opens.
 
 ### Phase 4 - Always-on discovery and background receiver
