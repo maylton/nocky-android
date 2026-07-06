@@ -1,6 +1,7 @@
 package com.metrolist.music.connect
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,6 +25,37 @@ class NockyConnectDeviceDescriptorTest {
         assertEquals(NockyConnectDevicePlatform.ANDROID, decoded.platform)
         assertTrue(decoded.features.contains(NockyConnectFeature.SNAPSHOT_EXPORT))
         assertTrue(decoded.features.contains(NockyConnectFeature.SNAPSHOT_IMPORT_PAUSED))
+        assertTrue(decoded.features.contains(NockyConnectFeature.HANDOFF_OFFER))
+        assertNull(decoded.handoffEndpoint)
+    }
+
+    @Test
+    fun encodesAndDecodesAndroidDescriptorWithHandoffEndpoint() {
+        val descriptor = NockyConnectDeviceDescriptor(
+            deviceId = "android-device",
+            deviceName = "Android phone",
+            platform = NockyConnectDevicePlatform.ANDROID,
+            appName = "Nocky Android",
+            appVersion = "dev",
+            handoffEndpoint = NockyConnectHandoffEndpoint(
+                transport = NockyConnectHandoffTransport.LOCAL_HTTP,
+                port = NOCKY_CONNECT_HANDOFF_PORT,
+            ),
+        )
+
+        val payload = NockyConnectDeviceDescriptorJson.encode(descriptor)
+        val decoded = NockyConnectDeviceDescriptorJson.decode(payload)
+
+        assertEquals(
+            NockyConnectHandoffEndpoint(
+                transport = NockyConnectHandoffTransport.LOCAL_HTTP,
+                port = NOCKY_CONNECT_HANDOFF_PORT,
+            ),
+            decoded.handoffEndpoint,
+        )
+        assertTrue(payload.contains("handoff_endpoint"))
+        assertTrue(payload.contains("local_http"))
+        assertTrue(payload.contains(NOCKY_CONNECT_HANDOFF_PATH))
     }
 
     @Test
@@ -41,6 +73,7 @@ class NockyConnectDeviceDescriptorTest {
         assertTrue(descriptor.features.contains(NockyConnectFeature.SNAPSHOT_EXPORT))
         assertTrue(descriptor.features.contains(NockyConnectFeature.SNAPSHOT_IMPORT_PAUSED))
         assertTrue(descriptor.features.contains(NockyConnectFeature.FILE_ROUND_TRIP))
+        assertNull(descriptor.handoffEndpoint)
     }
 
     @Test(expected = IllegalArgumentException::class)
