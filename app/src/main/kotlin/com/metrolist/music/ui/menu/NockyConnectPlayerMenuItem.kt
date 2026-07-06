@@ -39,7 +39,8 @@ import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
 
-private const val NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS = 1_800L
+private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
+private const val NOCKY_CONNECT_RECEIVE_TIMEOUT_MS = 15_000L
 
 private enum class AndroidNockyConnectDiscoveryMode {
     SEND,
@@ -144,8 +145,8 @@ private fun runAndroidNockyConnectDiscovery(
 ) {
     val appContext = context.applicationContext
     val startingMessage = when (mode) {
-        AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: scanning local network…"
-        AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: waiting for a desktop…"
+        AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: scanning for up to 6 seconds…"
+        AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: waiting up to 15 seconds…"
     }
     Toast.makeText(appContext, startingMessage, Toast.LENGTH_SHORT).show()
 
@@ -161,11 +162,11 @@ private fun runAndroidNockyConnectDiscovery(
             val devices = when (mode) {
                 AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
                     localDescriptor = descriptor,
-                    timeoutMs = NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS,
+                    timeoutMs = NOCKY_CONNECT_SEND_TIMEOUT_MS,
                 )
                 AndroidNockyConnectDiscoveryMode.RECEIVE -> NockyConnectUdpDiscovery.receiveOnce(
                     localDescriptor = descriptor,
-                    timeoutMs = NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS,
+                    timeoutMs = NOCKY_CONNECT_RECEIVE_TIMEOUT_MS,
                 )
             }
             if (devices.isEmpty()) {
