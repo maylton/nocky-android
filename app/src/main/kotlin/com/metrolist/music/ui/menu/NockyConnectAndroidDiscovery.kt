@@ -6,6 +6,15 @@ import android.os.Looper
 import com.metrolist.music.connect.NockyConnectDiscoveredDevice
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
 import com.metrolist.music.playback.PlayerConnection
+import java.util.concurrent.atomic.AtomicBoolean
+
+internal class AndroidNockyConnectPresenceSession(
+    private val isRunning: AtomicBoolean,
+) {
+    fun stop() {
+        isRunning.set(false)
+    }
+}
 
 internal fun scanAndroidNockyConnectDevices(
     context: Context,
@@ -30,6 +39,50 @@ internal fun scanAndroidNockyConnectDevices(
             }
         }
     }.start()
+}
+
+internal fun startAndroidNockyConnectPresenceSession(
+    context: Context,
+    playerConnection: PlayerConnection?,
+): AndroidNockyConnectPresenceSession? {
+    val appContext = context.applicationContext
+    if (!ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.compareAndSet(false, true)) {
+        return null
+    }
+
+    val isRunning = AtomicBoolean(true)
+    Thread {
+        try {
+            val descriptor = buildAndroidNockyConnectDescriptor(
+                context = appContext,
+                advertiseHandoffEndpoint = true,
+            )
+            while (isRunning.get()) {
+                startAndroidHandoffReceiver(
+                    context = appContext,
+                    localDeviceId = descriptor.deviceId,
+                    playerConnection = playerConnection,
+                    silentTimeout = true,
+                    receiveTimeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVER_SLICE_TIMEOUT_MS,
+                )
+                val devices = runCatching {
+                    NockyConnectUdpDiscovery.receiveOnce(
+                        localDescriptor = descriptor,
+                        timeoutMs = NOCKY_CONNECT_PRESENCE_POLL_TIMEOUT_MS,
+                    )
+                }.getOrDefault(emptyList())
+                if (devices.isNotEmpty()) {
+                    saveAndroidNockyConnectDeviceCache(devices)
+                }
+                Thread.sleep(NOCKY_CONNECT_PRESENCE_RESTART_DELAY_MS)
+            }
+        } finally {
+            isRunning.set(false)
+            ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.set(false)
+        }
+    }.start()
+
+    return AndroidNockyConnectPresenceSession(isRunning)
 }
 
 internal fun startAndroidNockyConnectPresenceWindow(
