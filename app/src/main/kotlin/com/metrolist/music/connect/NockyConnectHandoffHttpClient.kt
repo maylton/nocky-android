@@ -42,10 +42,14 @@ object NockyConnectHandoffHttpClient {
         offer: NockyConnectHandoffEnvelope,
         snapshotJson: String,
     ): NockyConnectHandoffEnvelope {
-        val offerResponse = sendJson(target, target.path, NockyConnectJson.format.encodeToString(
-            NockyConnectHandoffEnvelope.serializer(),
-            offer,
-        ))
+        val offerResponse = sendJson(
+            target = target,
+            path = target.path,
+            body = NockyConnectJson.format.encodeToString(
+                NockyConnectHandoffEnvelope.serializer(),
+                offer,
+            ),
+        )
         require(offerResponse.kind == NockyConnectHandoffKind.ACCEPT) {
             "Desktop did not accept handoff: ${offerResponse.kind}"
         }
@@ -82,10 +86,9 @@ object NockyConnectHandoffHttpClient {
         Socket().use { socket ->
             socket.soTimeout = HANDOFF_HTTP_TIMEOUT_MS
             socket.connect(InetSocketAddress(target.host, target.port), HANDOFF_HTTP_TIMEOUT_MS)
-            socket.getOutputStream().use { output ->
-                output.write(buildPostRequest(target, path, body))
-                output.flush()
-            }
+            val output = socket.getOutputStream()
+            output.write(buildPostRequest(target, path, body))
+            output.flush()
             val response = readHttpResponse(socket)
             return decodeResponse(response)
         }
