@@ -1,8 +1,8 @@
 package com.metrolist.music.connect
 
-import androidx.media3.common.Player
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
+import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.PersistPlayerState
 import com.metrolist.music.models.PersistQueue
 import com.metrolist.music.playback.MusicService
@@ -77,8 +77,8 @@ private fun MusicService.currentPersistQueueForNockyConnect(): PersistQueue =
     PersistQueue(
         title = queueTitle,
         items = player.mediaItems.mapNotNull { it.metadata },
-        mediaItemIndex = player.currentMediaItemIndex,
-        position = player.currentPosition,
+        mediaItemIndex = player.currentMediaItemIndex.coerceAtLeast(0),
+        position = player.currentPosition.coerceAtLeast(0L),
     )
 
 private fun MusicService.currentPersistPlayerStateForNockyConnect(): PersistPlayerState =
@@ -87,7 +87,7 @@ private fun MusicService.currentPersistPlayerStateForNockyConnect(): PersistPlay
         repeatMode = player.repeatMode,
         shuffleModeEnabled = player.shuffleModeEnabled,
         volume = playerVolume.value,
-        currentPosition = player.currentPosition,
+        currentPosition = player.currentPosition.coerceAtLeast(0L),
         currentMediaItemIndex = player.currentMediaItemIndex.coerceAtLeast(0),
         playbackState = player.playbackState,
     )
