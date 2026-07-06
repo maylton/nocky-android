@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nocky_connect">Nocky Connect</string>
+    <string name="nocky_connect_desc">Continue esta fila em outro dispositivo</string>
+    <string name="nocky_connect_surface_desc">Mova a reprodução entre este celular e o Nocky Desktop na sua rede local.</string>
+    <string name="nocky_connect_send_to_desktop">Enviar para o desktop</string>
+    <string name="nocky_connect_send_to_desktop_desc">Exporte a fila e a posição atuais para um Nocky Desktop confiável.</string>
+    <string name="nocky_connect_receive_from_desktop">Receber do desktop</string>
+    <string name="nocky_connect_receive_from_desktop_desc">Prepare este celular para importar uma sessão pausada do desktop.</string>
+    <string name="nocky_connect_section_this_device">Este dispositivo</string>
+    <string name="nocky_connect_section_available_devices">Dispositivos disponíveis</string>
+    <string name="nocky_connect_this_device_android_desc">Android · tocando neste dispositivo</string>
+    <string name="nocky_connect_scanning">Procurando…</string>
+    <string name="nocky_connect_no_desktop_found">Nenhum desktop encontrado</string>
+    <string name="nocky_connect_scan_again">Procurar novamente</string>
+    <string name="nocky_connect_status_scanning_visible">Procurando dispositivos próximos… o Android fica visível para o Desktop enquanto esta tela estiver aberta.</string>
+    <string name="nocky_connect_status_cached_desktop_one">1 desktop em cache disponível · atualizando…</string>
+    <string name="nocky_connect_status_cached_desktop_many">Desktops em cache disponíveis · atualizando…</string>
+    <string name="nocky_connect_status_discovery_failed">Falha na descoberta: %1$s</string>
+    <string name="nocky_connect_status_discovery_failed_cached">Falha na descoberta. Mostrando dispositivos vistos recentemente.</string>
+    <string name="nocky_connect_status_no_desktop_visible">Nenhum desktop encontrado ainda. O Android fica visível para o Desktop enquanto esta tela estiver aberta.</string>
+    <string name="nocky_connect_status_recent_desktop_one">1 desktop visto recentemente disponível</string>
+    <string name="nocky_connect_status_recent_desktop_many">Desktops vistos recentemente disponíveis</string>
+    <string name="nocky_connect_status_desktop_one">1 desktop disponível</string>
+    <string name="nocky_connect_status_desktop_many">Vários desktops disponíveis</string>
+</resources>
