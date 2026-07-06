@@ -72,7 +72,7 @@ private fun NockyConnectPlayerSurface(
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
-    val localDeviceName = remember { androidDeviceName() }
+    val localDeviceName = remember(appContext) { androidDeviceName(appContext) }
     var devices by remember { mutableStateOf(emptyList<AndroidNockyConnectCachedDevice>()) }
     var isScanning by remember { mutableStateOf(false) }
     var statusText by remember {
@@ -229,6 +229,7 @@ private fun NockyConnectPlayerSurface(
                                 description = {
                                     Text(
                                         text = androidNockyConnectDeviceSubtitle(
+                                            context = appContext,
                                             cached = cached,
                                             isConnecting = connectingDeviceId == deviceId,
                                             hasFailed = failedDeviceId == deviceId,
