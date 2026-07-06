@@ -41,6 +41,11 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 
 private const val NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS = 1_800L
 
+private enum class AndroidNockyConnectDiscoveryMode {
+    SEND,
+    RECEIVE,
+}
+
 @Composable
 fun nockyConnectPlayerMenuItem(
     onDismiss: () -> Unit,
@@ -106,7 +111,7 @@ private fun NockyConnectPlayerSurface() {
                     onClick = {
                         runAndroidNockyConnectDiscovery(
                             context = context,
-                            actionLabel = "Send to desktop",
+                            mode = AndroidNockyConnectDiscoveryMode.SEND,
                         )
                     },
                 ),
@@ -123,7 +128,7 @@ private fun NockyConnectPlayerSurface() {
                     onClick = {
                         runAndroidNockyConnectDiscovery(
                             context = context,
-                            actionLabel = "Receive from desktop",
+                            mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
                         )
                     },
                 ),
@@ -135,10 +140,14 @@ private fun NockyConnectPlayerSurface() {
 
 private fun runAndroidNockyConnectDiscovery(
     context: Context,
-    actionLabel: String,
+    mode: AndroidNockyConnectDiscoveryMode,
 ) {
     val appContext = context.applicationContext
-    Toast.makeText(appContext, "Nocky Connect: scanning local network…", Toast.LENGTH_SHORT).show()
+    val startingMessage = when (mode) {
+        AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: scanning local network…"
+        AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: waiting for a desktop…"
+    }
+    Toast.makeText(appContext, startingMessage, Toast.LENGTH_SHORT).show()
 
     Thread {
         val message = try {
@@ -149,12 +158,21 @@ private fun runAndroidNockyConnectDiscovery(
                 appName = "Nocky Android",
                 appVersion = null,
             )
-            val devices = NockyConnectUdpDiscovery.scanOnce(
-                localDescriptor = descriptor,
-                timeoutMs = NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS,
-            )
+            val devices = when (mode) {
+                AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
+                    localDescriptor = descriptor,
+                    timeoutMs = NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS,
+                )
+                AndroidNockyConnectDiscoveryMode.RECEIVE -> NockyConnectUdpDiscovery.receiveOnce(
+                    localDescriptor = descriptor,
+                    timeoutMs = NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS,
+                )
+            }
             if (devices.isEmpty()) {
-                "Nocky Connect: no devices found for $actionLabel"
+                when (mode) {
+                    AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: no devices found"
+                    AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: no desktop tried to connect"
+                }
             } else {
                 val names = devices
                     .take(3)
@@ -162,7 +180,7 @@ private fun runAndroidNockyConnectDiscovery(
                 "Nocky Connect: found ${devices.size} device(s): $names"
             }
         } catch (error: Exception) {
-            "Nocky Connect scan failed: ${error.message ?: error.javaClass.simpleName}"
+            "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}"
         }
 
         Handler(Looper.getMainLooper()).post {
