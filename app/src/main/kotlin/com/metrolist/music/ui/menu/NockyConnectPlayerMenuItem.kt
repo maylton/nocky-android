@@ -38,7 +38,6 @@ import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
 import com.metrolist.music.connect.NockyConnectHandoffEnvelope
 import com.metrolist.music.connect.NockyConnectHandoffHttpClient
-import com.metrolist.music.connect.NockyConnectHandoffHttpTarget
 import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
 import com.metrolist.music.connect.NockyConnectHandoffKind
 import com.metrolist.music.connect.NockyConnectHandoffPayload
@@ -242,7 +241,6 @@ private fun runAndroidNockyConnectDiscovery(
                 }
             } else if (mode == AndroidNockyConnectDiscoveryMode.SEND) {
                 sendAndroidSnapshotToDesktop(
-                    context = appContext,
                     localDescriptor = descriptor,
                     playerConnection = playerConnection,
                     devices = devices,
@@ -262,7 +260,6 @@ private fun runAndroidNockyConnectDiscovery(
 }
 
 private fun sendAndroidSnapshotToDesktop(
-    context: Context,
     localDescriptor: NockyConnectDeviceDescriptor,
     playerConnection: PlayerConnection?,
     devices: List<com.metrolist.music.connect.NockyConnectDiscoveredDevice>,
