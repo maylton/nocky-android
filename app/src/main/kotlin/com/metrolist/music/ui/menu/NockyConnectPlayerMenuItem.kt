@@ -70,6 +70,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
 private const val NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS = 60_000L
+private const val NOCKY_CONNECT_DEVICE_AVAILABLE_NOW_MS = 30_000L
 private const val NOCKY_CONNECT_DEVICE_STALE_AFTER_MS = 300_000L
 private const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = 45_000L
 private const val NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS = 2_000L
@@ -116,7 +117,7 @@ private fun NockyConnectPlayerSurface(
     val context = LocalContext.current
     val appContext = context.applicationContext
     val localDeviceName = remember { androidDeviceName() }
-    var devices by remember { mutableStateOf(emptyList<NockyConnectDiscoveredDevice>()) }
+    var devices by remember { mutableStateOf(emptyList<AndroidNockyConnectCachedDevice>()) }
     var isScanning by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf("Scanning for nearby devices…") }
 
@@ -125,7 +126,7 @@ private fun NockyConnectPlayerSurface(
         val cached = loadAndroidNockyConnectDeviceCache()
         if (cached.isNotEmpty()) {
             devices = cached
-            statusText = when (cached.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
+            statusText = when (cached.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
                 0 -> "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
                 1 -> "1 cached desktop available · refreshing…"
                 else -> "Cached desktops available · refreshing…"
@@ -152,11 +153,11 @@ private fun NockyConnectPlayerSurface(
                 val merged = loadAndroidNockyConnectDeviceCache()
                 devices = merged
                 val foundDesktopCount = found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
-                val desktopCount = merged.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
+                val desktopCount = merged.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
                 statusText = when {
                     desktopCount == 0 -> "No desktop found yet. Android stays visible for Desktop for 60 seconds."
-                    foundDesktopCount == 0 && desktopCount == 1 -> "1 cached desktop available"
-                    foundDesktopCount == 0 -> "Cached desktops available"
+                    foundDesktopCount == 0 && desktopCount == 1 -> "1 recently seen desktop available"
+                    foundDesktopCount == 0 -> "Recently seen desktops available"
                     desktopCount == 1 -> "1 desktop available"
                     else -> "Multiple desktops available"
                 }
@@ -168,9 +169,9 @@ private fun NockyConnectPlayerSurface(
         refreshDevices()
     }
 
-    val desktopDevices = devices.filter { device ->
-        device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
-            device.descriptor.handoffEndpoint != null
+    val desktopDevices = devices.filter { cached ->
+        cached.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
+            cached.device.descriptor.handoffEndpoint != null
     }
 
     Column(
@@ -235,7 +236,8 @@ private fun NockyConnectPlayerSurface(
                         ),
                     )
                 } else {
-                    desktopDevices.forEach { device ->
+                    desktopDevices.forEach { cached ->
+                        val device = cached.device
                         add(
                             Material3MenuItemData(
                                 title = {
@@ -245,7 +247,7 @@ private fun NockyConnectPlayerSurface(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 },
-                                description = { Text(text = "Linux desktop · tap to move playback") },
+                                description = { Text(text = androidNockyConnectDeviceSubtitle(cached)) },
                                 icon = {
                                     Icon(
                                         painter = painterResource(R.drawable.cast),
@@ -338,8 +340,8 @@ private fun scanAndroidNockyConnectDevices(
     }.start()
 }
 
-private fun loadAndroidNockyConnectDeviceCache(): List<NockyConnectDiscoveredDevice> =
-    pruneAndroidNockyConnectDeviceCache().map { cached -> cached.device }
+private fun loadAndroidNockyConnectDeviceCache(): List<AndroidNockyConnectCachedDevice> =
+    pruneAndroidNockyConnectDeviceCache()
 
 private fun saveAndroidNockyConnectDeviceCache(devices: List<NockyConnectDiscoveredDevice>) {
     if (devices.isEmpty()) return
@@ -586,6 +588,33 @@ private fun showNockyConnectToast(
     Handler(Looper.getMainLooper()).post {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
+}
+
+private fun androidNockyConnectDeviceSubtitle(cached: AndroidNockyConnectCachedDevice): String {
+    val platform = androidNockyConnectPlatformLabel(cached.device.descriptor.platform)
+    val ageMs = (System.currentTimeMillis() - cached.lastSeenEpochMs).coerceAtLeast(0L)
+    return if (ageMs <= NOCKY_CONNECT_DEVICE_AVAILABLE_NOW_MS) {
+        "$platform · available now · tap to move playback"
+    } else {
+        "$platform · recently seen · last seen ${androidNockyConnectRelativeAge(ageMs)} ago · tap to try moving playback"
+    }
+}
+
+private fun androidNockyConnectPlatformLabel(platform: NockyConnectDevicePlatform): String = when (platform) {
+    NockyConnectDevicePlatform.ANDROID -> "Android"
+    NockyConnectDevicePlatform.LINUX_DESKTOP -> "Linux desktop"
+    NockyConnectDevicePlatform.UNKNOWN -> "Unknown device"
+}
+
+private fun androidNockyConnectRelativeAge(ageMs: Long): String {
+    val seconds = ageMs / 1_000L
+    if (seconds < 60L) return "${seconds}s"
+
+    val minutes = seconds / 60L
+    if (minutes < 60L) return "${minutes}m"
+
+    val hours = minutes / 60L
+    return "${hours}h"
 }
 
 private fun buildAndroidNockyConnectDescriptor(
