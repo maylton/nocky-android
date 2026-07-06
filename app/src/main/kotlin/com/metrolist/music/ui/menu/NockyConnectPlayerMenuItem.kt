@@ -37,6 +37,7 @@ import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
 import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
 import com.metrolist.music.connect.NockyConnectHandoffTransport
+import com.metrolist.music.connect.NockyConnectPendingRestoreStore
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -203,12 +204,12 @@ private fun startAndroidHandoffReceiver(
                 localDeviceId = localDeviceId,
                 timeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS,
             )
-            val title = received.snapshot.queue.items
-                .getOrNull(received.snapshot.queue.currentIndex)
-                ?.title
-                ?: received.snapshot.queue.title
-                ?: "queue"
-            "Nocky Connect: snapshot prepared paused · $title · ${received.restorePlan.queue.items.size} items"
+            val summary = NockyConnectPendingRestoreStore.save(
+                context = context,
+                snapshot = received.snapshot,
+                restorePlan = received.restorePlan,
+            )
+            "Nocky Connect: pending restore saved · ${summary.title} · ${summary.itemCount} items"
         } catch (error: Exception) {
             "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
         }
