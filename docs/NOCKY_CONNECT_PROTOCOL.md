@@ -36,7 +36,9 @@ This PR implements the Android snapshot foundation only:
 - JSON codec;
 - export mapper from `PersistQueue` and `PersistPlayerState` to `PlaybackSessionSnapshot`;
 - restore mapper from `PlaybackSessionSnapshot` back to `PersistQueue` and paused `PersistPlayerState`;
-- unit tests for queue export, JSON round-trip, local best-effort identity and paused restore.
+- gateway for export/import validation and restore planning;
+- local private file store for manual/dev snapshot round trips;
+- unit tests for queue export, JSON round-trip, local best-effort identity, paused restore, gateway flow and file storage.
 
 It does not implement networking, QR pairing, WebSocket sync, UI actions, foreground services, automatic playback handoff or desktop-side code.
 
@@ -98,9 +100,22 @@ Restoring a snapshot is intentionally conservative:
 
 The actual one-tap handoff flow can later decide when to start playback after the destination resolves the current stream and the source device acknowledges the transfer.
 
+## Gateway and file store
+
+`NockyConnectGateway` is the future service/UI boundary. It can:
+
+- export a `PlaybackSessionSnapshot` from existing persisted queue/player state;
+- encode that snapshot as JSON;
+- decode received JSON;
+- reject unsupported schema names or schema versions;
+- produce a restore plan containing the rebuilt `PersistQueue` and paused `PersistPlayerState`.
+
+`NockyConnectFileStore` stores JSON snapshots in an app-private `nocky-connect` directory under the provided base directory. This is for manual and development round trips before LAN pairing exists.
+
 ## Next steps
 
-1. Add a development export entry point that writes the snapshot JSON to a file or share sheet.
-2. Add a development import entry point that accepts pasted/shared JSON and restores a paused queue.
-3. Implement the equivalent desktop models and importer/exporter.
-4. Add local-network pairing only after manual JSON round trips work both ways.
+1. Wire the gateway to `MusicService` with explicit export/restore methods.
+2. Add a development export entry point that writes the current session JSON to the file store or share sheet.
+3. Add a development import entry point that accepts pasted/shared JSON and restores a paused queue.
+4. Implement the equivalent desktop models and importer/exporter.
+5. Add local-network pairing only after manual JSON round trips work both ways.
