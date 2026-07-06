@@ -69,18 +69,16 @@ class NockyConnectPendingRestoreStoreTest {
     }
 
     @Test
-    fun convertsPendingQueueToListQueue() {
+    fun summarizesPendingRestoreQueueWithoutAndroidMediaItemConversion() {
         val restorePlan = NockyConnectGateway(deviceIdProvider = { "android-1" })
             .prepareRestore(sampleSnapshot())
 
-        val listQueue = restorePlan.queue.toListQueue()
-        val status = kotlinx.coroutines.runBlocking { listQueue.getInitialStatus() }
+        val summary = restorePlan.toSummary()
 
-        assertEquals("Desktop queue", status.title)
-        assertEquals(1, status.items.size)
-        assertEquals(0, status.mediaItemIndex)
-        assertEquals(2_267L, status.position)
-        assertEquals("video-1", status.items.first().mediaId)
+        assertEquals("Juno", summary.title)
+        assertEquals(1, summary.itemCount)
+        assertEquals(0, summary.currentIndex)
+        assertEquals(2_267L, summary.positionMs)
     }
 
     private fun sampleSnapshot(): PlaybackSessionSnapshot = PlaybackSessionSnapshot(
