@@ -24,7 +24,8 @@
     <string name="nocky_connect_platform_android">Android</string>
     <string name="nocky_connect_platform_linux_desktop">Linux desktop</string>
     <string name="nocky_connect_platform_unknown">Unknown device</string>
-    <string name="nocky_connect_subtitle_connecting">%1$s · connecting…</string>
+    <string name="nocky_connect_subtitle_connecting">%1$s · waiting for Desktop…</string>
+    <string name="nocky_connect_subtitle_delivered">%1$s · delivered · restored paused on Desktop</string>
     <string name="nocky_connect_subtitle_failed">%1$s · failed to connect · check Desktop, Wi-Fi, or TCP 35187</string>
     <string name="nocky_connect_subtitle_available_now">%1$s · available now · tap to move playback</string>
     <string name="nocky_connect_subtitle_recently_seen">%1$s · recently seen · last seen %2$s ago · tap to try moving playback</string>
