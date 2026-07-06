@@ -6,6 +6,7 @@
 package com.metrolist.music.connect
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -41,6 +42,45 @@ class NockyConnectPendingRestoreStoreTest {
         } finally {
             directory.deleteRecursively()
         }
+    }
+
+    @Test
+    fun loadsAndClearsPendingRestore() {
+        val directory = createTempDirectory(prefix = "nocky-connect-restore-test").toFile()
+        try {
+            val snapshot = sampleSnapshot()
+            val restorePlan = NockyConnectGateway(deviceIdProvider = { "android-1" })
+                .prepareRestore(snapshot)
+            NockyConnectPendingRestoreStore.saveToDirectory(directory, snapshot, restorePlan)
+
+            val pending = NockyConnectPendingRestoreStore.loadFromDirectory(directory)
+
+            requireNotNull(pending)
+            assertEquals(snapshot, pending.snapshot)
+            assertEquals("Juno", pending.queue.items.first().title)
+            assertEquals(2_267L, pending.playerState.currentPosition)
+            assertEquals("Juno", pending.toSummary().title)
+
+            NockyConnectPendingRestoreStore.clearDirectory(directory)
+            assertNull(NockyConnectPendingRestoreStore.loadFromDirectory(directory))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun convertsPendingQueueToListQueue() {
+        val restorePlan = NockyConnectGateway(deviceIdProvider = { "android-1" })
+            .prepareRestore(sampleSnapshot())
+
+        val listQueue = restorePlan.queue.toListQueue()
+        val status = kotlinx.coroutines.runBlocking { listQueue.getInitialStatus() }
+
+        assertEquals("Desktop queue", status.title)
+        assertEquals(1, status.items.size)
+        assertEquals(0, status.mediaItemIndex)
+        assertEquals(2_267L, status.position)
+        assertEquals("video-1", status.items.first().mediaId)
     }
 
     private fun sampleSnapshot(): PlaybackSessionSnapshot = PlaybackSessionSnapshot(
