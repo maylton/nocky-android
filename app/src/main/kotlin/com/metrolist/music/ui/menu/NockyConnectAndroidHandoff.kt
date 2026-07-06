@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.metrolist.music.R
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectDiscoveredDevice
@@ -31,20 +32,22 @@ internal fun sendAndroidSnapshotToSelectedDesktop(
     device: NockyConnectDiscoveredDevice,
     onComplete: (AndroidNockyConnectSendResult) -> Unit,
 ) {
+    val appContext = context.applicationContext
     Toast.makeText(
-        context.applicationContext,
-        "Nocky Connect: sending to ${device.descriptor.deviceName}…",
+        appContext,
+        appContext.getString(R.string.nocky_connect_toast_sending_to_device, device.descriptor.deviceName),
         Toast.LENGTH_SHORT,
     ).show()
     Thread {
         val result = try {
             val descriptor = buildAndroidNockyConnectDescriptor(
-                context = context.applicationContext,
+                context = appContext,
                 advertiseHandoffEndpoint = false,
             )
             AndroidNockyConnectSendResult(
                 success = true,
                 message = sendAndroidSnapshotToDesktop(
+                    context = appContext,
                     localDescriptor = descriptor,
                     playerConnection = playerConnection,
                     devices = listOf(device),
@@ -53,10 +56,13 @@ internal fun sendAndroidSnapshotToSelectedDesktop(
         } catch (error: Exception) {
             AndroidNockyConnectSendResult(
                 success = false,
-                message = "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}",
+                message = appContext.getString(
+                    R.string.nocky_connect_toast_failed,
+                    error.message ?: error.javaClass.simpleName,
+                ),
             )
         }
-        showNockyConnectToast(context.applicationContext, result.message)
+        showNockyConnectToast(appContext, result.message)
         Handler(Looper.getMainLooper()).post {
             onComplete(result)
         }
@@ -64,16 +70,18 @@ internal fun sendAndroidSnapshotToSelectedDesktop(
 }
 
 internal fun sendAndroidSnapshotToDesktop(
+    context: Context,
     localDescriptor: NockyConnectDeviceDescriptor,
     playerConnection: PlayerConnection?,
     devices: List<NockyConnectDiscoveredDevice>,
 ): String {
-    val connection = playerConnection ?: error("Android player is not connected")
+    val appContext = context.applicationContext
+    val connection = playerConnection ?: error(appContext.getString(R.string.nocky_connect_error_android_player_not_connected))
     val desktop = devices.firstOrNull { device ->
         device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
             device.descriptor.handoffEndpoint != null
-    } ?: error("Open Nocky Connect on Desktop and try again")
-    val snapshot = exportCurrentAndroidSnapshotOnMainThread(connection)
+    } ?: error(appContext.getString(R.string.nocky_connect_error_open_desktop))
+    val snapshot = exportCurrentAndroidSnapshotOnMainThread(appContext, connection)
     val snapshotJson = com.metrolist.music.connect.NockyConnectJson.encode(snapshot)
     val target = NockyConnectHandoffHttpClient.targetFromDiscoveredDevice(desktop)
     val offer = buildAndroidHandoffOffer(
@@ -88,24 +96,31 @@ internal fun sendAndroidSnapshotToDesktop(
     )
     val resultPayload = result.payload as? NockyConnectHandoffPayload.Result
     require(result.kind == NockyConnectHandoffKind.RESULT) {
-        "Unexpected desktop handoff response: ${result.kind}"
+        appContext.getString(R.string.nocky_connect_error_unexpected_desktop_response, result.kind)
     }
     require(resultPayload?.status == NockyConnectHandoffResultStatus.RESTORED_PAUSED) {
-        "Desktop did not restore paused: ${resultPayload?.status}"
+        appContext.getString(R.string.nocky_connect_error_desktop_restore_status, resultPayload?.status)
     }
     val currentTitle = snapshot.queue.items
         .getOrNull(snapshot.queue.currentIndex.coerceIn(0, (snapshot.queue.items.size - 1).coerceAtLeast(0)))
         ?.title
-        ?: "queue"
-    return "Nocky Connect: sent to ${desktop.descriptor.deviceName} · $currentTitle · ${snapshot.queue.items.size} items"
+        ?: appContext.getString(R.string.nocky_connect_queue_fallback)
+    return appContext.getString(
+        R.string.nocky_connect_toast_sent_to_desktop,
+        desktop.descriptor.deviceName,
+        currentTitle,
+        snapshot.queue.items.size,
+    )
 }
 
 internal fun exportCurrentAndroidSnapshotOnMainThread(
+    context: Context,
     playerConnection: PlayerConnection,
 ): PlaybackSessionSnapshot {
+    val appContext = context.applicationContext
     if (Looper.myLooper() == Looper.getMainLooper()) {
         return playerConnection.service.exportNockyConnectSnapshotForCurrentDevice()
-            ?: error("Current Android queue is empty")
+            ?: error(appContext.getString(R.string.nocky_connect_error_current_queue_empty))
     }
 
     val latch = CountDownLatch(1)
@@ -122,12 +137,12 @@ internal fun exportCurrentAndroidSnapshotOnMainThread(
     }
 
     check(latch.await(NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-        "Timed out while reading Android player snapshot"
+        appContext.getString(R.string.nocky_connect_error_snapshot_read_timeout)
     }
     failure.get()?.let { error ->
         throw IllegalStateException(error.message ?: error.javaClass.simpleName, error)
     }
-    return snapshot.get() ?: error("Current Android queue is empty")
+    return snapshot.get() ?: error(appContext.getString(R.string.nocky_connect_error_current_queue_empty))
 }
 
 internal fun buildAndroidHandoffOffer(
@@ -171,9 +186,10 @@ internal fun startAndroidHandoffReceiver(
     playerConnection: PlayerConnection?,
     silentTimeout: Boolean = false,
 ) {
+    val appContext = context.applicationContext
     if (!ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE.compareAndSet(false, true)) {
         if (!silentTimeout) {
-            showNockyConnectToast(context, "Nocky Connect: this device is already available for Desktop")
+            showNockyConnectToast(appContext, appContext.getString(R.string.nocky_connect_toast_already_available))
         }
         return
     }
@@ -185,32 +201,39 @@ internal fun startAndroidHandoffReceiver(
                 timeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS,
             )
             val summary = NockyConnectPendingRestoreStore.save(
-                context = context,
+                context = appContext,
                 snapshot = received.snapshot,
                 restorePlan = received.restorePlan,
             )
             if (playerConnection != null) {
                 Handler(Looper.getMainLooper()).post {
                     applyPendingNockyConnectRestore(
-                        context = context,
+                        context = appContext,
                         playerConnection = playerConnection,
                     )
                 }
-                "Nocky Connect: desktop snapshot received · applying paused restore…"
+                appContext.getString(R.string.nocky_connect_toast_desktop_snapshot_received)
             } else {
-                "Nocky Connect: pending restore saved · ${summary.title} · ${summary.itemCount} items"
+                appContext.getString(
+                    R.string.nocky_connect_toast_pending_restore_saved,
+                    summary.title,
+                    summary.itemCount,
+                )
             }
         } catch (error: Exception) {
             if (silentTimeout && error is SocketTimeoutException) {
                 null
             } else {
-                "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
+                appContext.getString(
+                    R.string.nocky_connect_toast_receiver_stopped,
+                    error.message ?: error.javaClass.simpleName,
+                )
             }
         } finally {
             ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE.set(false)
         }
         if (message != null) {
-            showNockyConnectToast(context, message)
+            showNockyConnectToast(appContext, message)
         }
     }.start()
 }
@@ -219,14 +242,22 @@ private fun applyPendingNockyConnectRestore(
     context: Context,
     playerConnection: PlayerConnection,
 ) {
+    val appContext = context.applicationContext
     val message = try {
         val summary = NockyConnectPendingRestoreApplier.applyPendingRestorePaused(
-            context = context.applicationContext,
+            context = appContext,
             playerConnection = playerConnection,
         )
-        "Nocky Connect: restored paused · ${summary.title} · ${summary.itemCount} items"
+        appContext.getString(
+            R.string.nocky_connect_toast_restored_paused,
+            summary.title,
+            summary.itemCount,
+        )
     } catch (error: Exception) {
-        "Nocky Connect restore failed: ${error.message ?: error.javaClass.simpleName}"
+        appContext.getString(
+            R.string.nocky_connect_toast_restore_failed,
+            error.message ?: error.javaClass.simpleName,
+        )
     }
-    Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
+    Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
 }
