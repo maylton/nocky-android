@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 const val DEVICE_DESCRIPTOR_SCHEMA = "io.github.maylton.nocky.connect.DeviceDescriptor"
 const val NOCKY_CONNECT_HANDOFF_PORT = 35187
 const val NOCKY_CONNECT_HANDOFF_PATH = "/nocky-connect/handoff"
+const val NOCKY_CONNECT_SNAPSHOT_PATH = "/nocky-connect/snapshot"
 
 @Serializable
 data class NockyConnectDeviceDescriptor(
