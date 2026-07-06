@@ -23,18 +23,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.connect.NOCKY_CONNECT_HANDOFF_PORT
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
+import com.metrolist.music.connect.NockyConnectDiscoveredDevice
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
 import com.metrolist.music.connect.NockyConnectHandoffEnvelope
 import com.metrolist.music.connect.NockyConnectHandoffHttpClient
@@ -100,6 +107,40 @@ private fun NockyConnectPlayerSurface(
     playerConnection: PlayerConnection?,
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
+    val localDeviceName = remember { androidDeviceName() }
+    var devices by remember { mutableStateOf(emptyList<NockyConnectDiscoveredDevice>()) }
+    var isScanning by remember { mutableStateOf(false) }
+    var statusText by remember { mutableStateOf("Scanning for nearby devices…") }
+
+    fun refreshDevices() {
+        isScanning = true
+        statusText = "Scanning for nearby devices…"
+        scanAndroidNockyConnectDevices(appContext) { result, error ->
+            isScanning = false
+            if (error != null) {
+                devices = emptyList()
+                statusText = "Discovery failed: ${error.message ?: error.javaClass.simpleName}"
+            } else {
+                val found = result.orEmpty()
+                devices = found
+                statusText = when (found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
+                    0 -> "No desktop found yet. Keep Nocky Connect open on Desktop and scan again."
+                    1 -> "1 desktop available"
+                    else -> "Multiple desktops available"
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshDevices()
+    }
+
+    val desktopDevices = devices.filter { device ->
+        device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
+            device.descriptor.handoffEndpoint != null
+    }
 
     Column(
         modifier = Modifier
@@ -121,53 +162,132 @@ private fun NockyConnectPlayerSurface(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+        SectionLabel("This device")
+        Material3MenuGroup(
+            items = listOf(
+                Material3MenuItemData(
+                    title = {
+                        Text(
+                            text = "✓ $localDeviceName",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    description = { Text(text = "Android · playing on this device") },
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.phone_android),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    },
+                ),
+            ),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        SectionLabel("Available devices")
         Material3MenuGroup(
             items = buildList {
+                if (desktopDevices.isEmpty()) {
+                    add(
+                        Material3MenuItemData(
+                            title = { Text(text = if (isScanning) "Scanning…" else "No desktop found") },
+                            description = { Text(text = statusText) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.cast),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                        ),
+                    )
+                } else {
+                    desktopDevices.forEach { device ->
+                        add(
+                            Material3MenuItemData(
+                                title = {
+                                    Text(
+                                        text = device.descriptor.deviceName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                description = { Text(text = "Linux desktop · tap to move playback") },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.cast),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                },
+                                onClick = {
+                                    sendAndroidSnapshotToSelectedDesktop(
+                                        context = appContext,
+                                        playerConnection = playerConnection,
+                                        device = device,
+                                    )
+                                },
+                            ),
+                        )
+                    }
+                }
                 add(
                     Material3MenuItemData(
-                        title = { Text(text = stringResource(R.string.nocky_connect_send_to_desktop)) },
-                        description = { Text(text = stringResource(R.string.nocky_connect_send_to_desktop_desc)) },
+                        title = { Text(text = "Scan again") },
+                        description = { Text(text = statusText) },
                         icon = {
                             Icon(
-                                painter = painterResource(R.drawable.cast),
+                                painter = painterResource(R.drawable.refresh),
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                             )
                         },
-                        onClick = {
-                            runAndroidNockyConnectDiscovery(
-                                context = context,
-                                mode = AndroidNockyConnectDiscoveryMode.SEND,
-                                playerConnection = playerConnection,
-                            )
-                        },
-                    ),
-                )
-                add(
-                    Material3MenuItemData(
-                        title = { Text(text = stringResource(R.string.nocky_connect_receive_from_desktop)) },
-                        description = { Text(text = stringResource(R.string.nocky_connect_receive_from_desktop_desc)) },
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.download),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        },
-                        onClick = {
-                            runAndroidNockyConnectDiscovery(
-                                context = context,
-                                mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
-                                playerConnection = playerConnection,
-                            )
-                        },
+                        onClick = { refreshDevices() },
                     ),
                 )
             },
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        SectionLabel("Actions")
+        Material3MenuGroup(
+            items = listOf(
+                Material3MenuItemData(
+                    title = { Text(text = "Make this device available for Desktop") },
+                    description = { Text(text = "Wait for Desktop to send playback here") },
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.download),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    },
+                    onClick = {
+                        runAndroidNockyConnectDiscovery(
+                            context = appContext,
+                            mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
+                            playerConnection = playerConnection,
+                        )
+                    },
+                ),
+            ),
+        )
         Spacer(modifier = Modifier.height(8.dp))
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 private fun applyPendingNockyConnectRestore(
@@ -184,6 +304,55 @@ private fun applyPendingNockyConnectRestore(
         "Nocky Connect restore failed: ${error.message ?: error.javaClass.simpleName}"
     }
     Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
+}
+
+private fun scanAndroidNockyConnectDevices(
+    context: Context,
+    onComplete: (List<NockyConnectDiscoveredDevice>?, Throwable?) -> Unit,
+) {
+    Thread {
+        try {
+            val descriptor = buildAndroidNockyConnectDescriptor(
+                context = context.applicationContext,
+                advertiseHandoffEndpoint = false,
+            )
+            val devices = NockyConnectUdpDiscovery.scanOnce(
+                localDescriptor = descriptor,
+                timeoutMs = NOCKY_CONNECT_SEND_TIMEOUT_MS,
+            )
+            Handler(Looper.getMainLooper()).post {
+                onComplete(devices, null)
+            }
+        } catch (error: Throwable) {
+            Handler(Looper.getMainLooper()).post {
+                onComplete(null, error)
+            }
+        }
+    }.start()
+}
+
+private fun sendAndroidSnapshotToSelectedDesktop(
+    context: Context,
+    playerConnection: PlayerConnection?,
+    device: NockyConnectDiscoveredDevice,
+) {
+    Toast.makeText(context.applicationContext, "Nocky Connect: sending to ${device.descriptor.deviceName}…", Toast.LENGTH_SHORT).show()
+    Thread {
+        val message = try {
+            val descriptor = buildAndroidNockyConnectDescriptor(
+                context = context.applicationContext,
+                advertiseHandoffEndpoint = false,
+            )
+            sendAndroidSnapshotToDesktop(
+                localDescriptor = descriptor,
+                playerConnection = playerConnection,
+                devices = listOf(device),
+            )
+        } catch (error: Exception) {
+            "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}"
+        }
+        showNockyConnectToast(context.applicationContext, message)
+    }.start()
 }
 
 private fun runAndroidNockyConnectDiscovery(
@@ -245,7 +414,7 @@ private fun runAndroidNockyConnectDiscovery(
 private fun sendAndroidSnapshotToDesktop(
     localDescriptor: NockyConnectDeviceDescriptor,
     playerConnection: PlayerConnection?,
-    devices: List<com.metrolist.music.connect.NockyConnectDiscoveredDevice>,
+    devices: List<NockyConnectDiscoveredDevice>,
 ): String {
     val connection = playerConnection ?: error("Android player is not connected")
     val desktop = devices.firstOrNull { device ->
