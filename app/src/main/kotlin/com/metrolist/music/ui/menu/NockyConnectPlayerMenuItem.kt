@@ -251,7 +251,7 @@ private fun sendAndroidSnapshotToDesktop(
     val desktop = devices.firstOrNull { device ->
         device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
             device.descriptor.handoffEndpoint != null
-    } ?: error("No desktop handoff endpoint found")
+    } ?: error("Open Nocky Connect on Desktop and try again")
     val snapshot = exportCurrentAndroidSnapshotOnMainThread(connection)
     val snapshotJson = com.metrolist.music.connect.NockyConnectJson.encode(snapshot)
     val target = NockyConnectHandoffHttpClient.targetFromDiscoveredDevice(desktop)
@@ -276,7 +276,7 @@ private fun sendAndroidSnapshotToDesktop(
         .getOrNull(snapshot.queue.currentIndex.coerceIn(0, (snapshot.queue.items.size - 1).coerceAtLeast(0)))
         ?.title
         ?: "queue"
-    return "Nocky Connect: sent to ${desktop.descriptor.deviceName} · $currentTitle · ${snapshot.queue.items.size} items · ${target.url}"
+    return "Nocky Connect: sent to ${desktop.descriptor.deviceName} · $currentTitle · ${snapshot.queue.items.size} items"
 }
 
 private fun exportCurrentAndroidSnapshotOnMainThread(
