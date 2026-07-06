@@ -73,11 +73,15 @@ internal fun androidNockyConnectDeviceSubtitle(
     context: Context,
     cached: AndroidNockyConnectCachedDevice,
     isConnecting: Boolean = false,
+    isDelivered: Boolean = false,
     hasFailed: Boolean = false,
 ): String {
     val platform = androidNockyConnectPlatformLabel(context, cached.device.descriptor.platform)
     if (isConnecting) {
         return context.getString(R.string.nocky_connect_subtitle_connecting, platform)
+    }
+    if (isDelivered) {
+        return context.getString(R.string.nocky_connect_subtitle_delivered, platform)
     }
     if (hasFailed) {
         return context.getString(R.string.nocky_connect_subtitle_failed, platform)
