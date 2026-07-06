@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.connect.NOCKY_CONNECT_HANDOFF_PORT
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
@@ -57,10 +58,10 @@ private enum class AndroidNockyConnectDiscoveryMode {
 
 @Composable
 fun nockyConnectPlayerMenuItem(
-    playerConnection: PlayerConnection,
     onDismiss: () -> Unit,
 ): Material3MenuItemData {
     val bottomSheetPageState = LocalBottomSheetPageState.current
+    val playerConnection = LocalPlayerConnection.current
 
     return Material3MenuItemData(
         title = { Text(text = stringResource(R.string.nocky_connect)) },
@@ -83,7 +84,7 @@ fun nockyConnectPlayerMenuItem(
 
 @Composable
 private fun NockyConnectPlayerSurface(
-    playerConnection: PlayerConnection,
+    playerConnection: PlayerConnection?,
 ) {
     val context = LocalContext.current
 
@@ -109,59 +110,67 @@ private fun NockyConnectPlayerSurface(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Material3MenuGroup(
-            items = listOf(
-                Material3MenuItemData(
-                    title = { Text(text = stringResource(R.string.nocky_connect_send_to_desktop)) },
-                    description = { Text(text = stringResource(R.string.nocky_connect_send_to_desktop_desc)) },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.cast),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    },
-                    onClick = {
-                        runAndroidNockyConnectDiscovery(
-                            context = context,
-                            mode = AndroidNockyConnectDiscoveryMode.SEND,
-                        )
-                    },
-                ),
-                Material3MenuItemData(
-                    title = { Text(text = stringResource(R.string.nocky_connect_receive_from_desktop)) },
-                    description = { Text(text = stringResource(R.string.nocky_connect_receive_from_desktop_desc)) },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.download),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    },
-                    onClick = {
-                        runAndroidNockyConnectDiscovery(
-                            context = context,
-                            mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
-                        )
-                    },
-                ),
-                Material3MenuItemData(
-                    title = { Text(text = "Apply pending restore") },
-                    description = { Text(text = "Restore the received desktop queue paused") },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.replay),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    },
-                    onClick = {
-                        applyPendingNockyConnectRestore(
-                            context = context,
-                            playerConnection = playerConnection,
-                        )
-                    },
-                ),
-            ),
+            items = buildList {
+                add(
+                    Material3MenuItemData(
+                        title = { Text(text = stringResource(R.string.nocky_connect_send_to_desktop)) },
+                        description = { Text(text = stringResource(R.string.nocky_connect_send_to_desktop_desc)) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.cast),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
+                        onClick = {
+                            runAndroidNockyConnectDiscovery(
+                                context = context,
+                                mode = AndroidNockyConnectDiscoveryMode.SEND,
+                            )
+                        },
+                    ),
+                )
+                add(
+                    Material3MenuItemData(
+                        title = { Text(text = stringResource(R.string.nocky_connect_receive_from_desktop)) },
+                        description = { Text(text = stringResource(R.string.nocky_connect_receive_from_desktop_desc)) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.download),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
+                        onClick = {
+                            runAndroidNockyConnectDiscovery(
+                                context = context,
+                                mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
+                            )
+                        },
+                    ),
+                )
+                if (playerConnection != null) {
+                    add(
+                        Material3MenuItemData(
+                            title = { Text(text = "Apply pending restore") },
+                            description = { Text(text = "Restore the received desktop queue paused") },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.replay),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                            onClick = {
+                                applyPendingNockyConnectRestore(
+                                    context = context,
+                                    playerConnection = playerConnection,
+                                )
+                            },
+                        ),
+                    )
+                }
+            },
         )
         Spacer(modifier = Modifier.height(8.dp))
     }
