@@ -35,6 +35,8 @@ import com.metrolist.music.connect.NOCKY_CONNECT_HANDOFF_PORT
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
+import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
+import com.metrolist.music.connect.NockyConnectHandoffPayload
 import com.metrolist.music.connect.NockyConnectHandoffTransport
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
@@ -44,6 +46,7 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 
 private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
 private const val NOCKY_CONNECT_RECEIVE_TIMEOUT_MS = 15_000L
+private const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = 45_000L
 
 private enum class AndroidNockyConnectDiscoveryMode {
     SEND,
@@ -159,6 +162,9 @@ private fun runAndroidNockyConnectDiscovery(
                 context = appContext,
                 advertiseHandoffEndpoint = mode == AndroidNockyConnectDiscoveryMode.RECEIVE,
             )
+            if (mode == AndroidNockyConnectDiscoveryMode.RECEIVE) {
+                startAndroidHandoffReceiver(appContext, descriptor.deviceId)
+            }
             val devices = when (mode) {
                 AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
                     localDescriptor = descriptor,
@@ -184,10 +190,37 @@ private fun runAndroidNockyConnectDiscovery(
             "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}"
         }
 
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
-        }
+        showNockyConnectToast(appContext, message)
     }.start()
+}
+
+private fun startAndroidHandoffReceiver(
+    context: Context,
+    localDeviceId: String,
+) {
+    Thread {
+        val message = try {
+            val received = NockyConnectHandoffHttpReceiver.receiveOne(
+                localDeviceId = localDeviceId,
+                timeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS,
+            )
+            val offer = received.envelope.payload as NockyConnectHandoffPayload.Offer
+            val title = offer.snapshotSummary.currentTitle ?: "queue"
+            "Nocky Connect: handoff offer received · $title · ${offer.snapshotSummary.queueItems} items"
+        } catch (error: Exception) {
+            "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
+        }
+        showNockyConnectToast(context, message)
+    }.start()
+}
+
+private fun showNockyConnectToast(
+    context: Context,
+    message: String,
+) {
+    Handler(Looper.getMainLooper()).post {
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    }
 }
 
 private fun buildAndroidNockyConnectDescriptor(
