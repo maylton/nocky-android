@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,12 +82,18 @@ private fun NockyConnectPlayerSurface(
     var connectingDeviceId by remember { mutableStateOf<String?>(null) }
     var failedDeviceId by remember { mutableStateOf<String?>(null) }
 
+    DisposableEffect(appContext, playerConnection) {
+        val presenceSession = startAndroidNockyConnectPresenceSession(appContext, playerConnection)
+        onDispose {
+            presenceSession?.stop()
+        }
+    }
+
     fun refreshDevices() {
         if (isScanning) return
 
         connectingDeviceId = null
         failedDeviceId = null
-        startAndroidNockyConnectPresenceWindow(appContext, playerConnection)
         val cached = loadAndroidNockyConnectDeviceCache()
         if (cached.isNotEmpty()) {
             devices = cached
