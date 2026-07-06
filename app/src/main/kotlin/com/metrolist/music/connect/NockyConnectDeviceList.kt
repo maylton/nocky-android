@@ -7,10 +7,7 @@ data class NockyConnectDeviceListEntry(
     val addressHost: String,
     val addressPort: Int,
     val lastSeenMs: Long,
-) {
-    val secondsSinceLastSeen: Long
-        get() = 0L
-}
+)
 
 class NockyConnectDeviceList {
     private val devices = linkedMapOf<String, NockyConnectDeviceListEntry>()
@@ -36,7 +33,7 @@ class NockyConnectDeviceList {
     ) {
         devices[device.descriptor.deviceId] = NockyConnectDeviceListEntry(
             descriptor = device.descriptor,
-            addressHost = device.address.address.hostAddress.orEmpty(),
+            addressHost = device.address.hostString,
             addressPort = device.address.port,
             lastSeenMs = nowMs,
         )
