@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.offline.Download
 import com.metrolist.music.R
-import com.metrolist.music.utils.makeTimeString
+import com.metrolist.music.ui.menu.nockyConnectPlayerMenuItem
 
 val GridMenuItemHeight = 108.dp
 
@@ -52,7 +52,7 @@ fun GridMenu(
         columns = GridCells.Adaptive(minSize = 120.dp),
         modifier = modifier,
         contentPadding = contentPadding,
-        content = content
+        content = content,
     )
 }
 
@@ -69,12 +69,12 @@ fun LazyGridScope.GridMenuItem(
         Icon(
             painter = painterResource(icon),
             tint = tint(),
-            contentDescription = null
+            contentDescription = null,
         )
     },
     title = title,
     enabled = enabled,
-    onClick = onClick
+    onClick = onClick,
 )
 
 fun LazyGridScope.GridMenuItem(
@@ -91,17 +91,17 @@ fun LazyGridScope.GridMenuItem(
                 .height(GridMenuItemHeight)
                 .clickable(
                     enabled = enabled,
-                    onClick = onClick
+                    onClick = onClick,
                 )
                 .alpha(if (enabled) 1f else 0.5f)
-                .padding(12.dp)
+                .padding(12.dp),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentAlignment = Alignment.Center,
-                content = icon
+                content = icon,
             )
             Text(
                 text = stringResource(title),
@@ -112,7 +112,7 @@ fun LazyGridScope.GridMenuItem(
                     .fillMaxWidth()
                     .height(with(LocalDensity.current) {
                         MaterialTheme.typography.labelLarge.lineHeight.toDp() * 2
-                    })
+                    }),
             )
         }
     }
@@ -129,7 +129,7 @@ fun LazyGridScope.DownloadGridMenu(
             GridMenuItem(
                 icon = R.drawable.offline,
                 title = R.string.remove_download,
-                onClick = onRemoveDownload
+                onClick = onRemoveDownload,
             )
         }
 
@@ -138,11 +138,11 @@ fun LazyGridScope.DownloadGridMenu(
                 icon = {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
                     )
                 },
                 title = R.string.downloading,
-                onClick = onRemoveDownload
+                onClick = onRemoveDownload,
             )
         }
 
@@ -150,7 +150,7 @@ fun LazyGridScope.DownloadGridMenu(
             GridMenuItem(
                 icon = R.drawable.download,
                 title = R.string.action_download,
-                onClick = onDownload
+                onClick = onDownload,
             )
         }
     }
@@ -160,17 +160,19 @@ fun LazyGridScope.SleepTimerGridMenu(
     modifier: Modifier = Modifier,
     sleepTimerTimeLeft: Long,
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     item {
+        val nockyConnectItem = nockyConnectPlayerMenuItem(onDismiss = {})
         Column(
             modifier = modifier
                 .clip(ShapeDefaults.Large)
                 .height(GridMenuItemHeight)
                 .clickable(
-                    onClick = onClick
+                    enabled = nockyConnectItem.onClick != null,
+                    onClick = { nockyConnectItem.onClick?.invoke() },
                 )
-                .padding(12.dp)
+                .padding(12.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -179,20 +181,18 @@ fun LazyGridScope.SleepTimerGridMenu(
                 contentAlignment = Alignment.Center,
                 content = {
                     Icon(
-                        painterResource(R.drawable.bedtime),
+                        painterResource(R.drawable.cast),
                         contentDescription = null,
-                        modifier = Modifier.alpha(if (enabled) 1f else 0.5f)
+                        modifier = Modifier.alpha(1f),
                     )
-                }
+                },
             )
             Text(
-                text = if (enabled) makeTimeString(sleepTimerTimeLeft) else stringResource(
-                    id = R.string.sleep_timer
-                ),
+                text = stringResource(R.string.nocky_connect),
                 style = MaterialTheme.typography.labelLarge,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
