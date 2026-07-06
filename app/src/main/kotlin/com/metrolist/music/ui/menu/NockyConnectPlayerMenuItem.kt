@@ -31,8 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.R
+import com.metrolist.music.connect.NOCKY_CONNECT_HANDOFF_PORT
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
+import com.metrolist.music.connect.NockyConnectHandoffEndpoint
+import com.metrolist.music.connect.NockyConnectHandoffTransport
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -152,12 +155,9 @@ private fun runAndroidNockyConnectDiscovery(
 
     Thread {
         val message = try {
-            val descriptor = NockyConnectDeviceDescriptor(
-                deviceId = appContext.getOrCreateNockyConnectDeviceId(),
-                deviceName = androidDeviceName(),
-                platform = NockyConnectDevicePlatform.ANDROID,
-                appName = "Nocky Android",
-                appVersion = null,
+            val descriptor = buildAndroidNockyConnectDescriptor(
+                context = appContext,
+                advertiseHandoffEndpoint = mode == AndroidNockyConnectDiscoveryMode.RECEIVE,
             )
             val devices = when (mode) {
                 AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
@@ -189,6 +189,25 @@ private fun runAndroidNockyConnectDiscovery(
         }
     }.start()
 }
+
+private fun buildAndroidNockyConnectDescriptor(
+    context: Context,
+    advertiseHandoffEndpoint: Boolean,
+): NockyConnectDeviceDescriptor = NockyConnectDeviceDescriptor(
+    deviceId = context.getOrCreateNockyConnectDeviceId(),
+    deviceName = androidDeviceName(),
+    platform = NockyConnectDevicePlatform.ANDROID,
+    appName = "Nocky Android",
+    appVersion = null,
+    handoffEndpoint = if (advertiseHandoffEndpoint) {
+        NockyConnectHandoffEndpoint(
+            transport = NockyConnectHandoffTransport.LOCAL_HTTP,
+            port = NOCKY_CONNECT_HANDOFF_PORT,
+        )
+    } else {
+        null
+    },
+)
 
 private fun androidDeviceName(): String =
     listOf(Build.MANUFACTURER, Build.MODEL)
