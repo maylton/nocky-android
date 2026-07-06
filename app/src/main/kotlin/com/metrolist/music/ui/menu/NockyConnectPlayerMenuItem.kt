@@ -177,7 +177,7 @@ private fun NockyConnectPlayerSurface(
                     description = { Text(text = "Android · playing on this device") },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.phone_android),
+                            painter = painterResource(R.drawable.cast),
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
                         )
@@ -239,7 +239,7 @@ private fun NockyConnectPlayerSurface(
                         description = { Text(text = statusText) },
                         icon = {
                             Icon(
-                                painter = painterResource(R.drawable.refresh),
+                                painter = painterResource(R.drawable.replay),
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                             )
