@@ -40,6 +40,7 @@ This PR implements the Android snapshot foundation only:
 - local private file store for manual/dev snapshot round trips;
 - local device identity helper backed by app-private `SharedPreferences`;
 - `MusicService` bridge helpers in a separate file, without modifying `MusicService.kt`;
+- shared v1 JSON fixture compatibility test;
 - unit tests for queue export, JSON round-trip, local best-effort identity, paused restore, gateway flow and file storage.
 
 It does not implement networking, QR pairing, WebSocket sync, UI actions, foreground services, automatic playback handoff or desktop-side code. The service bridge is opt-in: nothing calls it yet, so the existing Metrolist playback flow remains unchanged.
@@ -123,6 +124,10 @@ The actual one-tap handoff flow can later decide when to start playback after th
 - restore the latest saved snapshot file.
 
 `NockyConnectDeviceIdentity` creates a random app-local device ID and stores it in app-private preferences. It is intentionally not based on Android hardware IDs.
+
+## Compatibility fixture
+
+`app/src/test/resources/nocky-connect-snapshot-v1.json` is a shared protocol fixture. `NockyConnectCompatibilityFixtureTest` decodes it and prepares a paused restore plan to verify Android remains compatible with the desktop-side v1 snapshot contract.
 
 ## Next steps
 
