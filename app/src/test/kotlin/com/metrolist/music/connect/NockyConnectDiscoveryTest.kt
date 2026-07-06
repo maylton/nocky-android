@@ -1,8 +1,8 @@
 package com.metrolist.music.connect
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
+import org.junit.Test
 
 class NockyConnectDiscoveryTest {
     @Test
@@ -53,12 +53,14 @@ class NockyConnectDiscoveryTest {
             }
         """.trimIndent()
 
-        val error = assertFailsWith<IllegalArgumentException> {
+        try {
             NockyConnectDiscoveryJson.decode(payload)
+            fail("Expected discovery envelope with invalid magic to fail")
+        } catch (error: IllegalArgumentException) {
+            assertEquals(
+                "Unsupported Nocky Connect discovery magic: OTHER_APP",
+                error.message,
+            )
         }
-        assertEquals(
-            "Unsupported Nocky Connect discovery magic: OTHER_APP",
-            error.message,
-        )
     }
 }
