@@ -75,4 +75,20 @@ object NockyConnectDiscoveryJson {
         }
         NockyConnectDeviceDescriptorJson.requireSupported(envelope.descriptor)
     }
+
+    fun responseForPayload(
+        payload: String,
+        localDescriptor: NockyConnectDeviceDescriptor,
+        responseMessageId: String,
+    ): String? {
+        val envelope = decode(payload)
+        if (envelope.kind != NockyConnectDiscoveryKind.HELLO) return null
+        if (envelope.descriptor.deviceId == localDescriptor.deviceId) return null
+
+        val response = announce(
+            messageId = responseMessageId,
+            descriptor = localDescriptor,
+        )
+        return encode(response)
+    }
 }
