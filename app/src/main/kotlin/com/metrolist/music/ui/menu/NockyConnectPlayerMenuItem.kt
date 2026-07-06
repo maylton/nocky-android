@@ -71,11 +71,18 @@ import java.util.concurrent.atomic.AtomicReference
 private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
 private const val NOCKY_CONNECT_RECEIVE_TIMEOUT_MS = 15_000L
 private const val NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS = 60_000L
+private const val NOCKY_CONNECT_DEVICE_STALE_AFTER_MS = 300_000L
 private const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = 45_000L
 private const val NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS = 2_000L
 
 private val ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE = AtomicBoolean(false)
 private val ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE = AtomicBoolean(false)
+private val ANDROID_NOCKY_CONNECT_DEVICE_CACHE = AtomicReference<List<AndroidNockyConnectCachedDevice>>(emptyList())
+
+private data class AndroidNockyConnectCachedDevice(
+    val device: NockyConnectDiscoveredDevice,
+    val lastSeenEpochMs: Long,
+)
 
 private enum class AndroidNockyConnectDiscoveryMode {
     SEND,
@@ -121,19 +128,42 @@ private fun NockyConnectPlayerSurface(
 
     fun refreshDevices() {
         startAndroidNockyConnectPresenceWindow(appContext, playerConnection)
+        val cached = loadAndroidNockyConnectDeviceCache()
+        if (cached.isNotEmpty()) {
+            devices = cached
+            statusText = when (cached.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
+                0 -> "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
+                1 -> "1 cached desktop available · refreshing…"
+                else -> "Cached desktops available · refreshing…"
+            }
+        } else {
+            statusText = "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
+        }
         isScanning = true
-        statusText = "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
         scanAndroidNockyConnectDevices(appContext) { result, error ->
             isScanning = false
             if (error != null) {
-                devices = emptyList()
-                statusText = "Discovery failed: ${error.message ?: error.javaClass.simpleName}"
+                val cachedDevices = loadAndroidNockyConnectDeviceCache()
+                devices = cachedDevices
+                statusText = if (cachedDevices.isEmpty()) {
+                    "Discovery failed: ${error.message ?: error.javaClass.simpleName}"
+                } else {
+                    "Discovery failed. Showing recently seen devices."
+                }
             } else {
                 val found = result.orEmpty()
-                devices = found
-                statusText = when (found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
-                    0 -> "No desktop found yet. Android stays visible for Desktop for 60 seconds."
-                    1 -> "1 desktop available"
+                if (found.isNotEmpty()) {
+                    saveAndroidNockyConnectDeviceCache(found)
+                }
+                val merged = loadAndroidNockyConnectDeviceCache()
+                devices = merged
+                val foundDesktopCount = found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
+                val desktopCount = merged.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
+                statusText = when {
+                    desktopCount == 0 -> "No desktop found yet. Android stays visible for Desktop for 60 seconds."
+                    foundDesktopCount == 0 && desktopCount == 1 -> "1 cached desktop available"
+                    foundDesktopCount == 0 -> "Cached desktops available"
+                    desktopCount == 1 -> "1 desktop available"
                     else -> "Multiple desktops available"
                 }
             }
@@ -338,6 +368,34 @@ private fun scanAndroidNockyConnectDevices(
     }.start()
 }
 
+private fun loadAndroidNockyConnectDeviceCache(): List<NockyConnectDiscoveredDevice> =
+    pruneAndroidNockyConnectDeviceCache().map { cached -> cached.device }
+
+private fun saveAndroidNockyConnectDeviceCache(devices: List<NockyConnectDiscoveredDevice>) {
+    if (devices.isEmpty()) return
+    val now = System.currentTimeMillis()
+    val merged = linkedMapOf<String, AndroidNockyConnectCachedDevice>()
+    pruneAndroidNockyConnectDeviceCache().forEach { cached ->
+        merged[cached.device.descriptor.deviceId] = cached
+    }
+    devices.forEach { device ->
+        merged[device.descriptor.deviceId] = AndroidNockyConnectCachedDevice(
+            device = device,
+            lastSeenEpochMs = now,
+        )
+    }
+    ANDROID_NOCKY_CONNECT_DEVICE_CACHE.set(merged.values.toList())
+}
+
+private fun pruneAndroidNockyConnectDeviceCache(): List<AndroidNockyConnectCachedDevice> {
+    val now = System.currentTimeMillis()
+    val fresh = ANDROID_NOCKY_CONNECT_DEVICE_CACHE.get().filter { cached ->
+        now - cached.lastSeenEpochMs <= NOCKY_CONNECT_DEVICE_STALE_AFTER_MS
+    }
+    ANDROID_NOCKY_CONNECT_DEVICE_CACHE.set(fresh)
+    return fresh
+}
+
 private fun startAndroidNockyConnectPresenceWindow(
     context: Context,
     playerConnection: PlayerConnection?,
@@ -359,10 +417,13 @@ private fun startAndroidNockyConnectPresenceWindow(
                 playerConnection = playerConnection,
                 silentTimeout = true,
             )
-            NockyConnectUdpDiscovery.receiveOnce(
+            val devices = NockyConnectUdpDiscovery.receiveOnce(
                 localDescriptor = descriptor,
                 timeoutMs = NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS,
             )
+            if (devices.isNotEmpty()) {
+                saveAndroidNockyConnectDeviceCache(devices)
+            }
         } catch (_: Exception) {
             // Presence is opportunistic: regular foreground scans still report
             // actionable discovery errors to the surface.
@@ -429,6 +490,9 @@ private fun runAndroidNockyConnectDiscovery(
                         localDescriptor = descriptor,
                         timeoutMs = NOCKY_CONNECT_RECEIVE_TIMEOUT_MS,
                     )
+                }
+                if (devices.isNotEmpty()) {
+                    saveAndroidNockyConnectDeviceCache(devices)
                 }
                 if (devices.isEmpty()) {
                     when (mode) {
