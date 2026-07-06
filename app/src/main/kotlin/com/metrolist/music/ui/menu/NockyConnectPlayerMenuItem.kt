@@ -126,6 +126,7 @@ private fun NockyConnectPlayerSurface(
                             runAndroidNockyConnectDiscovery(
                                 context = context,
                                 mode = AndroidNockyConnectDiscoveryMode.SEND,
+                                playerConnection = null,
                             )
                         },
                     ),
@@ -145,6 +146,7 @@ private fun NockyConnectPlayerSurface(
                             runAndroidNockyConnectDiscovery(
                                 context = context,
                                 mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
+                                playerConnection = playerConnection,
                             )
                         },
                     ),
@@ -195,6 +197,7 @@ private fun applyPendingNockyConnectRestore(
 private fun runAndroidNockyConnectDiscovery(
     context: Context,
     mode: AndroidNockyConnectDiscoveryMode,
+    playerConnection: PlayerConnection?,
 ) {
     val appContext = context.applicationContext
     val startingMessage = when (mode) {
@@ -210,7 +213,7 @@ private fun runAndroidNockyConnectDiscovery(
                 advertiseHandoffEndpoint = mode == AndroidNockyConnectDiscoveryMode.RECEIVE,
             )
             if (mode == AndroidNockyConnectDiscoveryMode.RECEIVE) {
-                startAndroidHandoffReceiver(appContext, descriptor.deviceId)
+                startAndroidHandoffReceiver(appContext, descriptor.deviceId, playerConnection)
             }
             val devices = when (mode) {
                 AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
@@ -244,6 +247,7 @@ private fun runAndroidNockyConnectDiscovery(
 private fun startAndroidHandoffReceiver(
     context: Context,
     localDeviceId: String,
+    playerConnection: PlayerConnection?,
 ) {
     Thread {
         val message = try {
@@ -256,7 +260,17 @@ private fun startAndroidHandoffReceiver(
                 snapshot = received.snapshot,
                 restorePlan = received.restorePlan,
             )
-            "Nocky Connect: pending restore saved · ${summary.title} · ${summary.itemCount} items"
+            if (playerConnection != null) {
+                Handler(Looper.getMainLooper()).post {
+                    applyPendingNockyConnectRestore(
+                        context = context,
+                        playerConnection = playerConnection,
+                    )
+                }
+                "Nocky Connect: desktop snapshot received · applying paused restore…"
+            } else {
+                "Nocky Connect: pending restore saved · ${summary.title} · ${summary.itemCount} items"
+            }
         } catch (error: Exception) {
             "Nocky Connect receiver stopped: ${error.message ?: error.javaClass.simpleName}"
         }
