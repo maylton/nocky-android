@@ -1,6 +1,5 @@
 package com.metrolist.music.connect
 
-import java.io.File
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toMediaItem
@@ -8,6 +7,7 @@ import com.metrolist.music.models.PersistPlayerState
 import com.metrolist.music.models.PersistQueue
 import com.metrolist.music.playback.MusicService
 import com.metrolist.music.playback.queues.ListQueue
+import java.io.File
 
 fun MusicService.exportNockyConnectSnapshot(
     deviceId: String,
