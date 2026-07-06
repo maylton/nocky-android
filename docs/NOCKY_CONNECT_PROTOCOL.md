@@ -42,7 +42,7 @@ This PR implements the Android snapshot foundation only:
 - `MusicService` bridge helpers in a separate file, without modifying `MusicService.kt`;
 - unit tests for queue export, JSON round-trip, local best-effort identity, paused restore, gateway flow and file storage.
 
-It does not implement networking, QR pairing, WebSocket sync, UI actions, foreground services, automatic playback handoff or desktop-side code.
+It does not implement networking, QR pairing, WebSocket sync, UI actions, foreground services, automatic playback handoff or desktop-side code. The service bridge is opt-in: nothing calls it yet, so the existing Metrolist playback flow remains unchanged.
 
 ## Portable snapshot shape
 
