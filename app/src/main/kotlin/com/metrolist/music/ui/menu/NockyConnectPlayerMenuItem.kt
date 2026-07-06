@@ -164,27 +164,6 @@ private fun NockyConnectPlayerSurface(
                         },
                     ),
                 )
-                if (playerConnection != null) {
-                    add(
-                        Material3MenuItemData(
-                            title = { Text(text = "Apply pending restore") },
-                            description = { Text(text = "Restore the received desktop queue paused") },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(R.drawable.replay),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            },
-                            onClick = {
-                                applyPendingNockyConnectRestore(
-                                    context = context,
-                                    playerConnection = playerConnection,
-                                )
-                            },
-                        ),
-                    )
-                }
             },
         )
         Spacer(modifier = Modifier.height(8.dp))
