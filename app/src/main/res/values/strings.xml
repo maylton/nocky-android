@@ -77,8 +77,8 @@
     <string name="liked_songs">Liked songs</string>
     <string name="downloaded_songs">Downloaded songs</string>
     <string name="playlist_is_empty">The playlist is empty</string>
-    <string name="remove_download_playlist_confirm">Do you really want to remove all \"%s\" playlist songs from the Downloaded Songs storage?</string>
-    <string name="delete_playlist_confirm">Do you really want to delete the playlist \"%s\"?</string>
+    <string name="remove_download_playlist_confirm">Do you really want to remove all "%s" playlist songs from the Downloaded Songs storage?</string>
+    <string name="delete_playlist_confirm">Do you really want to delete the playlist "%s"?</string>
 
     <!-- Button -->
     <string name="retry">Retry</string>
@@ -115,6 +115,9 @@
     <string name="action_sync">Sync</string>
     <string name="advanced">Advanced</string>
     <string name="tempo_and_pitch">Tempo and Pitch</string>
+    <string name="nocky_connect">Nocky Connect</string>
+    <string name="nocky_connect_desc">Continue this queue on another device</string>
+    <string name="nocky_connect_discovery_coming_soon">Nocky Connect: local discovery will be added next</string>
 
     <!-- Sort menu -->
     <string name="sort_by_create_date">Date added</string>
@@ -196,7 +199,7 @@
 
     <!-- Snackbar -->
     <string name="playlist_imported">Playlist imported</string>
-    <string name="removed_song_from_playlist">Removed \"%s\" from playlist</string>
+    <string name="removed_song_from_playlist">Removed "%s" from playlist</string>
     <string name="playlist_synced">Playlist synced</string>
     <string name="undo">Undo</string>
 
@@ -316,11 +319,11 @@
     <string name="search_history">Search history</string>
     <string name="pause_search_history">Pause search history</string>
     <string name="clear_search_history">Clear search history</string>
-    <string name="clear_search_history_confirm">Are you sure you want to clear all search history?</string>
+    <string name="clear_search_history_confirm">Are you sure you want to clear search history?</string>
     <string name="use_login_for_browse">Use login for browsing content</string>
     <string name="use_login_for_browse_desc">This can influence what content you see and for example shows premium-only albums if you are logged in with a Premium account</string>
     <string name="disable_screenshot">Disable screenshot</string>
-    <string name="disable_screenshot_desc">When this option is on, screenshots and the app\'s view in Recents are disabled.</string>
+    <string name="disable_screenshot_desc">When this option is on, screenshots and the app's view in Recents are disabled.</string>
     <string name="enable_lrclib">Enable LrcLib lyrics provider</string>
     <string name="enable_kugou">Enable KuGou lyrics provider</string>
     <string name="hide_explicit">Hide explicit content</string>
@@ -330,7 +333,7 @@
     <string name="action_restore">Restore</string>
     <string name="imported_playlist">Imported playlist</string>
     <string name="backup_create_success">Backup created successfully</string>
-    <string name="backup_create_failed">Couldn\'t create backup</string>
+    <string name="backup_create_failed">Couldn't create backup</string>
     <string name="restore_failed">Failed to restore backup</string>
 
     <string name="dismiss">Dismiss</string>
