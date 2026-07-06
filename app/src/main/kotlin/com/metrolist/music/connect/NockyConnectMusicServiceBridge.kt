@@ -1,5 +1,6 @@
 package com.metrolist.music.connect
 
+import java.io.File
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.toMediaItem
@@ -25,6 +26,16 @@ fun MusicService.exportNockyConnectSnapshot(
         )
 }
 
+fun MusicService.exportNockyConnectSnapshotForCurrentDevice(
+    sessionId: String = NockyConnectSnapshotMapper.newSessionId(),
+    revision: Long = 1L,
+): PlaybackSessionSnapshot? =
+    exportNockyConnectSnapshot(
+        deviceId = getOrCreateNockyConnectDeviceId(),
+        sessionId = sessionId,
+        revision = revision,
+    )
+
 fun MusicService.exportNockyConnectSnapshotJson(
     deviceId: String,
     sessionId: String = NockyConnectSnapshotMapper.newSessionId(),
@@ -36,11 +47,40 @@ fun MusicService.exportNockyConnectSnapshotJson(
         revision = revision,
     )?.let(NockyConnectJson::encode)
 
+fun MusicService.exportNockyConnectSnapshotJsonForCurrentDevice(
+    sessionId: String = NockyConnectSnapshotMapper.newSessionId(),
+    revision: Long = 1L,
+): String? =
+    exportNockyConnectSnapshotJson(
+        deviceId = getOrCreateNockyConnectDeviceId(),
+        sessionId = sessionId,
+        revision = revision,
+    )
+
+fun MusicService.writeNockyConnectSnapshotFile(
+    sessionId: String = NockyConnectSnapshotMapper.newSessionId(),
+    revision: Long = 1L,
+): File? =
+    exportNockyConnectSnapshotForCurrentDevice(
+        sessionId = sessionId,
+        revision = revision,
+    )?.let { snapshot ->
+        NockyConnectFileStore(filesDir).writeSnapshot(snapshot)
+    }
+
 fun MusicService.prepareNockyConnectRestore(
     payload: String,
     deviceId: String,
 ): NockyConnectRestorePlan =
     NockyConnectGateway(deviceIdProvider = { deviceId }).prepareRestore(payload)
+
+fun MusicService.prepareNockyConnectRestoreForCurrentDevice(
+    payload: String,
+): NockyConnectRestorePlan =
+    prepareNockyConnectRestore(
+        payload = payload,
+        deviceId = getOrCreateNockyConnectDeviceId(),
+    )
 
 fun MusicService.restoreNockyConnectSnapshotPaused(
     plan: NockyConnectRestorePlan,
@@ -71,6 +111,21 @@ fun MusicService.restoreNockyConnectSnapshotJsonPaused(
     )
     restoreNockyConnectSnapshotPaused(plan)
     return plan
+}
+
+fun MusicService.restoreNockyConnectSnapshotJsonPausedForCurrentDevice(
+    payload: String,
+): NockyConnectRestorePlan {
+    val plan = prepareNockyConnectRestoreForCurrentDevice(payload)
+    restoreNockyConnectSnapshotPaused(plan)
+    return plan
+}
+
+fun MusicService.restoreLatestNockyConnectSnapshotFilePaused(): NockyConnectRestorePlan? {
+    val store = NockyConnectFileStore(filesDir)
+    val latest = store.latestSnapshotFile() ?: return null
+    val payload = latest.readText()
+    return restoreNockyConnectSnapshotJsonPausedForCurrentDevice(payload)
 }
 
 private fun MusicService.currentPersistQueueForNockyConnect(): PersistQueue =
