@@ -37,9 +37,11 @@ import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
 import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
 import com.metrolist.music.connect.NockyConnectHandoffTransport
+import com.metrolist.music.connect.NockyConnectPendingRestoreApplier
 import com.metrolist.music.connect.NockyConnectPendingRestoreStore
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
+import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
@@ -55,6 +57,7 @@ private enum class AndroidNockyConnectDiscoveryMode {
 
 @Composable
 fun nockyConnectPlayerMenuItem(
+    playerConnection: PlayerConnection,
     onDismiss: () -> Unit,
 ): Material3MenuItemData {
     val bottomSheetPageState = LocalBottomSheetPageState.current
@@ -71,7 +74,7 @@ fun nockyConnectPlayerMenuItem(
         },
         onClick = {
             bottomSheetPageState.show {
-                NockyConnectPlayerSurface()
+                NockyConnectPlayerSurface(playerConnection = playerConnection)
             }
             onDismiss()
         },
@@ -79,7 +82,9 @@ fun nockyConnectPlayerMenuItem(
 }
 
 @Composable
-private fun NockyConnectPlayerSurface() {
+private fun NockyConnectPlayerSurface(
+    playerConnection: PlayerConnection,
+) {
     val context = LocalContext.current
 
     Column(
@@ -139,10 +144,43 @@ private fun NockyConnectPlayerSurface() {
                         )
                     },
                 ),
+                Material3MenuItemData(
+                    title = { Text(text = "Apply pending restore") },
+                    description = { Text(text = "Restore the received desktop queue paused") },
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.replay),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    },
+                    onClick = {
+                        applyPendingNockyConnectRestore(
+                            context = context,
+                            playerConnection = playerConnection,
+                        )
+                    },
+                ),
             ),
         )
         Spacer(modifier = Modifier.height(8.dp))
     }
+}
+
+private fun applyPendingNockyConnectRestore(
+    context: Context,
+    playerConnection: PlayerConnection,
+) {
+    val message = try {
+        val summary = NockyConnectPendingRestoreApplier.applyPendingRestorePaused(
+            context = context.applicationContext,
+            playerConnection = playerConnection,
+        )
+        "Nocky Connect: restored paused · ${summary.title} · ${summary.itemCount} items"
+    } catch (error: Exception) {
+        "Nocky Connect restore failed: ${error.message ?: error.javaClass.simpleName}"
+    }
+    Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
 }
 
 private fun runAndroidNockyConnectDiscovery(
