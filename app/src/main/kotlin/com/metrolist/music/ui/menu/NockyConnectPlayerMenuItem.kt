@@ -75,7 +75,9 @@ private fun NockyConnectPlayerSurface(
     val localDeviceName = remember { androidDeviceName() }
     var devices by remember { mutableStateOf(emptyList<AndroidNockyConnectCachedDevice>()) }
     var isScanning by remember { mutableStateOf(false) }
-    var statusText by remember { mutableStateOf("Scanning for nearby devices…") }
+    var statusText by remember {
+        mutableStateOf(appContext.getString(R.string.nocky_connect_status_scanning_visible))
+    }
     var connectingDeviceId by remember { mutableStateOf<String?>(null) }
     var failedDeviceId by remember { mutableStateOf<String?>(null) }
 
@@ -89,12 +91,12 @@ private fun NockyConnectPlayerSurface(
         if (cached.isNotEmpty()) {
             devices = cached
             statusText = when (cached.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
-                0 -> "Scanning for nearby devices… Android is visible to Desktop while this sheet is open."
-                1 -> "1 cached desktop available · refreshing…"
-                else -> "Cached desktops available · refreshing…"
+                0 -> appContext.getString(R.string.nocky_connect_status_scanning_visible)
+                1 -> appContext.getString(R.string.nocky_connect_status_cached_desktop_one)
+                else -> appContext.getString(R.string.nocky_connect_status_cached_desktop_many)
             }
         } else {
-            statusText = "Scanning for nearby devices… Android is visible to Desktop while this sheet is open."
+            statusText = appContext.getString(R.string.nocky_connect_status_scanning_visible)
         }
         isScanning = true
         scanAndroidNockyConnectDevices(appContext) { result, error ->
@@ -103,9 +105,12 @@ private fun NockyConnectPlayerSurface(
                 val cachedDevices = loadAndroidNockyConnectDeviceCache()
                 devices = cachedDevices
                 statusText = if (cachedDevices.isEmpty()) {
-                    "Discovery failed: ${error.message ?: error.javaClass.simpleName}"
+                    appContext.getString(
+                        R.string.nocky_connect_status_discovery_failed,
+                        error.message ?: error.javaClass.simpleName,
+                    )
                 } else {
-                    "Discovery failed. Showing recently seen devices."
+                    appContext.getString(R.string.nocky_connect_status_discovery_failed_cached)
                 }
             } else {
                 val found = result.orEmpty()
@@ -117,11 +122,11 @@ private fun NockyConnectPlayerSurface(
                 val foundDesktopCount = found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
                 val desktopCount = merged.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
                 statusText = when {
-                    desktopCount == 0 -> "No desktop found yet. Android stays visible for Desktop while this sheet is open."
-                    foundDesktopCount == 0 && desktopCount == 1 -> "1 recently seen desktop available"
-                    foundDesktopCount == 0 -> "Recently seen desktops available"
-                    desktopCount == 1 -> "1 desktop available"
-                    else -> "Multiple desktops available"
+                    desktopCount == 0 -> appContext.getString(R.string.nocky_connect_status_no_desktop_visible)
+                    foundDesktopCount == 0 && desktopCount == 1 -> appContext.getString(R.string.nocky_connect_status_recent_desktop_one)
+                    foundDesktopCount == 0 -> appContext.getString(R.string.nocky_connect_status_recent_desktop_many)
+                    desktopCount == 1 -> appContext.getString(R.string.nocky_connect_status_desktop_one)
+                    else -> appContext.getString(R.string.nocky_connect_status_desktop_many)
                 }
             }
         }
@@ -160,7 +165,7 @@ private fun NockyConnectPlayerSurface(
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(20.dp))
-        SectionLabel("This device")
+        SectionLabel(stringResource(R.string.nocky_connect_section_this_device))
         Material3MenuGroup(
             items = listOf(
                 Material3MenuItemData(
@@ -171,7 +176,7 @@ private fun NockyConnectPlayerSurface(
                             overflow = TextOverflow.Ellipsis,
                         )
                     },
-                    description = { Text(text = "Android · playing on this device") },
+                    description = { Text(text = stringResource(R.string.nocky_connect_this_device_android_desc)) },
                     icon = {
                         Icon(
                             painter = painterResource(R.drawable.cast),
@@ -183,13 +188,21 @@ private fun NockyConnectPlayerSurface(
             ),
         )
         Spacer(modifier = Modifier.height(16.dp))
-        SectionLabel("Available devices")
+        SectionLabel(stringResource(R.string.nocky_connect_section_available_devices))
         Material3MenuGroup(
             items = buildList {
                 if (desktopDevices.isEmpty()) {
                     add(
                         Material3MenuItemData(
-                            title = { Text(text = if (isScanning) "Scanning…" else "No desktop found") },
+                            title = {
+                                Text(
+                                    text = if (isScanning) {
+                                        stringResource(R.string.nocky_connect_scanning)
+                                    } else {
+                                        stringResource(R.string.nocky_connect_no_desktop_found)
+                                    },
+                                )
+                            },
                             description = { Text(text = statusText) },
                             icon = {
                                 Icon(
@@ -247,7 +260,15 @@ private fun NockyConnectPlayerSurface(
                 }
                 add(
                     Material3MenuItemData(
-                        title = { Text(text = if (isScanning) "Scanning…" else "Scan again") },
+                        title = {
+                            Text(
+                                text = if (isScanning) {
+                                    stringResource(R.string.nocky_connect_scanning)
+                                } else {
+                                    stringResource(R.string.nocky_connect_scan_again)
+                                },
+                            )
+                        },
                         description = { Text(text = statusText) },
                         icon = {
                             Icon(
