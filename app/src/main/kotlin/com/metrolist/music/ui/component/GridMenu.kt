@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.offline.Download
 import com.metrolist.music.R
-import com.metrolist.music.ui.menu.nockyConnectPlayerMenuItem
+import com.metrolist.music.utils.makeTimeString
 
 val GridMenuItemHeight = 108.dp
 
@@ -163,14 +163,12 @@ fun LazyGridScope.SleepTimerGridMenu(
     onClick: () -> Unit,
 ) {
     item {
-        val nockyConnectItem = nockyConnectPlayerMenuItem(onDismiss = {})
         Column(
             modifier = modifier
                 .clip(ShapeDefaults.Large)
                 .height(GridMenuItemHeight)
                 .clickable(
-                    enabled = nockyConnectItem.onClick != null,
-                    onClick = { nockyConnectItem.onClick?.invoke() },
+                    onClick = onClick,
                 )
                 .padding(12.dp),
         ) {
@@ -181,14 +179,16 @@ fun LazyGridScope.SleepTimerGridMenu(
                 contentAlignment = Alignment.Center,
                 content = {
                     Icon(
-                        painterResource(R.drawable.cast),
+                        painterResource(R.drawable.bedtime),
                         contentDescription = null,
-                        modifier = Modifier.alpha(1f),
+                        modifier = Modifier.alpha(if (enabled) 1f else 0.5f),
                     )
                 },
             )
             Text(
-                text = stringResource(R.string.nocky_connect),
+                text = if (enabled) makeTimeString(sleepTimerTimeLeft) else stringResource(
+                    id = R.string.sleep_timer,
+                ),
                 style = MaterialTheme.typography.labelLarge,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
