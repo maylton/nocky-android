@@ -24,40 +24,91 @@ data class NockyConnectReceivedHandoffOffer(
     val remoteAddress: InetSocketAddress,
 )
 
+data class NockyConnectReceivedHandoffSnapshot(
+    val offer: NockyConnectHandoffEnvelope,
+    val snapshot: PlaybackSessionSnapshot,
+    val restorePlan: NockyConnectRestorePlan,
+    val remoteAddress: InetSocketAddress,
+)
+
 object NockyConnectHandoffHttpReceiver {
     fun receiveOne(
         localDeviceId: String,
         timeoutMs: Long,
     ): NockyConnectReceivedHandoffOffer {
         ServerSocket().use { server ->
-            server.reuseAddress = true
-            server.soTimeout = timeoutMs.coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
-            server.bind(InetSocketAddress("0.0.0.0", NOCKY_CONNECT_HANDOFF_PORT))
+            prepareServer(server, timeoutMs)
+            val accepted = acceptRequest(server)
+            val envelope = decodeOfferRequest(accepted.request)
+            val accept = acceptedResponseForOffer(
+                envelope = envelope,
+                localDeviceId = localDeviceId,
+                nowEpochMs = System.currentTimeMillis(),
+            )
+            writeJsonResponse(
+                output = accepted.output,
+                statusCode = 202,
+                statusText = "Accepted",
+                body = NockyConnectJson.format.encodeToString(
+                    NockyConnectHandoffEnvelope.serializer(),
+                    accept,
+                ),
+            )
+            return NockyConnectReceivedHandoffOffer(
+                envelope = envelope,
+                remoteAddress = accepted.remoteAddress,
+            )
+        }
+    }
 
-            val socket = server.accept()
-            socket.use { accepted ->
-                accepted.soTimeout = HANDOFF_HTTP_SOCKET_READ_TIMEOUT_MS
-                val request = readHttpRequest(accepted.getInputStream())
-                val envelope = decodeOfferRequest(request)
-                val accept = acceptedResponseForOffer(
-                    envelope = envelope,
-                    localDeviceId = localDeviceId,
-                    nowEpochMs = System.currentTimeMillis(),
-                )
-                writeJsonResponse(
-                    output = accepted.getOutputStream(),
-                    statusCode = 202,
-                    statusText = "Accepted",
-                    body = NockyConnectJson.format.encodeToString(
-                        NockyConnectHandoffEnvelope.serializer(),
-                        accept,
-                    ),
-                )
-                return NockyConnectReceivedHandoffOffer(
-                    envelope = envelope,
-                    remoteAddress = accepted.remoteSocketAddress as InetSocketAddress,
-                )
-            }
+    fun receiveOfferAndSnapshot(
+        localDeviceId: String,
+        timeoutMs: Long,
+    ): NockyConnectReceivedHandoffSnapshot {
+        ServerSocket().use { server ->
+            prepareServer(server, timeoutMs)
+
+            val offerRequest = acceptRequest(server)
+            val offerEnvelope = decodeOfferRequest(offerRequest.request)
+            val accept = acceptedResponseForOffer(
+                envelope = offerEnvelope,
+                localDeviceId = localDeviceId,
+                nowEpochMs = System.currentTimeMillis(),
+            )
+            writeJsonResponse(
+                output = offerRequest.output,
+                statusCode = 202,
+                statusText = "Accepted",
+                body = NockyConnectJson.format.encodeToString(
+                    NockyConnectHandoffEnvelope.serializer(),
+                    accept,
+                ),
+            )
+
+            val snapshotRequest = acceptRequest(server)
+            val snapshot = decodeSnapshotRequest(snapshotRequest.request)
+            val restorePlan = NockyConnectGateway(deviceIdProvider = { localDeviceId })
+                .prepareRestore(snapshot)
+            val result = resultResponseForSnapshot(
+                offerEnvelope = offerEnvelope,
+                nowEpochMs = System.currentTimeMillis(),
+            )
+            writeJsonResponse(
+                output = snapshotRequest.output,
+                statusCode = 202,
+                statusText = "Accepted",
+                body = NockyConnectJson.format.encodeToString(
+                    NockyConnectHandoffEnvelope.serializer(),
+                    result,
+                ),
+            )
+
+            return NockyConnectReceivedHandoffSnapshot(
+                offer = offerEnvelope,
+                snapshot = snapshot,
+                restorePlan = restorePlan,
+                remoteAddress = snapshotRequest.remoteAddress,
+            )
         }
     }
 }
@@ -66,6 +117,12 @@ internal data class NockyConnectHttpRequest(
     val method: String,
     val path: String,
     val body: String,
+)
+
+private data class AcceptedHttpRequest(
+    val request: NockyConnectHttpRequest,
+    val output: OutputStream,
+    val remoteAddress: InetSocketAddress,
 )
 
 internal fun decodeOfferRequest(request: NockyConnectHttpRequest): NockyConnectHandoffEnvelope {
@@ -91,6 +148,20 @@ internal fun decodeOfferRequest(request: NockyConnectHttpRequest): NockyConnectH
     return envelope
 }
 
+internal fun decodeSnapshotRequest(request: NockyConnectHttpRequest): PlaybackSessionSnapshot {
+    require(request.method == "POST") { "Unsupported snapshot HTTP method: ${request.method}" }
+    require(request.path == NOCKY_CONNECT_SNAPSHOT_PATH) { "Unsupported snapshot path: ${request.path}" }
+
+    val snapshot = NockyConnectJson.decodePlaybackSessionSnapshot(request.body)
+    require(snapshot.schema == PLAYBACK_SESSION_SNAPSHOT_SCHEMA) {
+        "Unsupported snapshot schema: ${snapshot.schema}"
+    }
+    require(snapshot.schemaVersion == NOCKY_CONNECT_PROTOCOL_VERSION) {
+        "Unsupported snapshot schema version: ${snapshot.schemaVersion}"
+    }
+    return snapshot
+}
+
 internal fun acceptedResponseForOffer(
     envelope: NockyConnectHandoffEnvelope,
     localDeviceId: String,
@@ -107,6 +178,41 @@ internal fun acceptedResponseForOffer(
             offerId = offer.offerId,
             receiverDeviceId = localDeviceId,
         ),
+    )
+}
+
+internal fun resultResponseForSnapshot(
+    offerEnvelope: NockyConnectHandoffEnvelope,
+    nowEpochMs: Long,
+): NockyConnectHandoffEnvelope {
+    val offer = offerEnvelope.payload as? NockyConnectHandoffPayload.Offer
+    requireNotNull(offer) { "Handoff offer payload expected" }
+
+    return NockyConnectHandoffEnvelope(
+        messageId = "android-result-$nowEpochMs",
+        createdAtEpochMs = nowEpochMs,
+        kind = NockyConnectHandoffKind.RESULT,
+        payload = NockyConnectHandoffPayload.Result(
+            offerId = offer.offerId,
+            status = NockyConnectHandoffResultStatus.RESTORED_PAUSED,
+        ),
+    )
+}
+
+private fun prepareServer(server: ServerSocket, timeoutMs: Long) {
+    server.reuseAddress = true
+    server.soTimeout = timeoutMs.coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+    server.bind(InetSocketAddress("0.0.0.0", NOCKY_CONNECT_HANDOFF_PORT))
+}
+
+private fun acceptRequest(server: ServerSocket): AcceptedHttpRequest {
+    val socket = server.accept()
+    socket.soTimeout = HANDOFF_HTTP_SOCKET_READ_TIMEOUT_MS
+    val request = readHttpRequest(socket.getInputStream())
+    return AcceptedHttpRequest(
+        request = request,
+        output = socket.getOutputStream(),
+        remoteAddress = socket.remoteSocketAddress as InetSocketAddress,
     )
 }
 
