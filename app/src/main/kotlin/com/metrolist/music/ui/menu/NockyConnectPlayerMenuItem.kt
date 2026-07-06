@@ -8,6 +8,10 @@
 
 package com.metrolist.music.ui.menu
 
+import android.content.Context
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,9 +31,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.R
+import com.metrolist.music.connect.NockyConnectDeviceDescriptor
+import com.metrolist.music.connect.NockyConnectDevicePlatform
+import com.metrolist.music.connect.NockyConnectUdpDiscovery
+import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
+
+private const val NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS = 1_800L
 
 @Composable
 fun nockyConnectPlayerMenuItem(
@@ -59,7 +69,6 @@ fun nockyConnectPlayerMenuItem(
 @Composable
 private fun NockyConnectPlayerSurface() {
     val context = LocalContext.current
-    val comingSoon = stringResource(R.string.nocky_connect_discovery_coming_soon)
 
     Column(
         modifier = Modifier
@@ -95,7 +104,10 @@ private fun NockyConnectPlayerSurface() {
                         )
                     },
                     onClick = {
-                        Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show()
+                        runAndroidNockyConnectDiscovery(
+                            context = context,
+                            actionLabel = "Send to desktop",
+                        )
                     },
                 ),
                 Material3MenuItemData(
@@ -109,7 +121,10 @@ private fun NockyConnectPlayerSurface() {
                         )
                     },
                     onClick = {
-                        Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show()
+                        runAndroidNockyConnectDiscovery(
+                            context = context,
+                            actionLabel = "Receive from desktop",
+                        )
                     },
                 ),
             ),
@@ -117,3 +132,47 @@ private fun NockyConnectPlayerSurface() {
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
+
+private fun runAndroidNockyConnectDiscovery(
+    context: Context,
+    actionLabel: String,
+) {
+    val appContext = context.applicationContext
+    Toast.makeText(appContext, "Nocky Connect: scanning local network…", Toast.LENGTH_SHORT).show()
+
+    Thread {
+        val message = try {
+            val descriptor = NockyConnectDeviceDescriptor(
+                deviceId = appContext.getOrCreateNockyConnectDeviceId(),
+                deviceName = androidDeviceName(),
+                platform = NockyConnectDevicePlatform.ANDROID,
+                appName = "Nocky Android",
+                appVersion = null,
+            )
+            val devices = NockyConnectUdpDiscovery.scanOnce(
+                localDescriptor = descriptor,
+                timeoutMs = NOCKY_CONNECT_DISCOVERY_TIMEOUT_MS,
+            )
+            if (devices.isEmpty()) {
+                "Nocky Connect: no devices found for $actionLabel"
+            } else {
+                val names = devices
+                    .take(3)
+                    .joinToString { device -> device.descriptor.deviceName }
+                "Nocky Connect: found ${devices.size} device(s): $names"
+            }
+        } catch (error: Exception) {
+            "Nocky Connect scan failed: ${error.message ?: error.javaClass.simpleName}"
+        }
+
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+        }
+    }.start()
+}
+
+private fun androidDeviceName(): String =
+    listOf(Build.MANUFACTURER, Build.MODEL)
+        .filter { value -> value.isNotBlank() }
+        .joinToString(" ")
+        .ifBlank { "Android device" }
