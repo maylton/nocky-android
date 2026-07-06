@@ -26,6 +26,23 @@ class NockyConnectDeviceDescriptorTest {
         assertTrue(decoded.features.contains(NockyConnectFeature.SNAPSHOT_IMPORT_PAUSED))
     }
 
+    @Test
+    fun decodesSharedV1DescriptorFixture() {
+        val payload = readFixture()
+
+        val descriptor = NockyConnectDeviceDescriptorJson.decode(payload)
+
+        assertEquals(DEVICE_DESCRIPTOR_SCHEMA, descriptor.schema)
+        assertEquals(NOCKY_CONNECT_PROTOCOL_VERSION, descriptor.schemaVersion)
+        assertEquals("fixture-android-device", descriptor.deviceId)
+        assertEquals("Fixture Android phone", descriptor.deviceName)
+        assertEquals(NockyConnectDevicePlatform.ANDROID, descriptor.platform)
+        assertEquals(NOCKY_CONNECT_PROTOCOL_VERSION, descriptor.protocolVersion)
+        assertTrue(descriptor.features.contains(NockyConnectFeature.SNAPSHOT_EXPORT))
+        assertTrue(descriptor.features.contains(NockyConnectFeature.SNAPSHOT_IMPORT_PAUSED))
+        assertTrue(descriptor.features.contains(NockyConnectFeature.FILE_ROUND_TRIP))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun rejectsUnsupportedProtocolVersion() {
         val payload = """
@@ -44,4 +61,11 @@ class NockyConnectDeviceDescriptorTest {
 
         NockyConnectDeviceDescriptorJson.decode(payload)
     }
+
+    private fun readFixture(): String =
+        requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("nocky-connect-device-descriptor-v1.json"),
+        ) { "Missing nocky-connect-device-descriptor-v1.json test resource" }
+            .bufferedReader()
+            .use { it.readText() }
 }
