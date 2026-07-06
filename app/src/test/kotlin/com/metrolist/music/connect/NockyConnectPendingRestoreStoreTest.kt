@@ -9,11 +9,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class NockyConnectPendingRestoreStoreTest {
     @Test
     fun savesSnapshotQueueAndPausedPlayerState() {
-        val directory = createTempDir(prefix = "nocky-connect-restore-test")
+        val directory = createTempDirectory(prefix = "nocky-connect-restore-test").toFile()
         try {
             val snapshot = sampleSnapshot()
             val restorePlan = NockyConnectGateway(deviceIdProvider = { "android-1" })
