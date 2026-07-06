@@ -286,30 +286,6 @@ private fun NockyConnectPlayerSurface(
                 )
             },
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        SectionLabel("Actions")
-        Material3MenuGroup(
-            items = listOf(
-                Material3MenuItemData(
-                    title = { Text(text = "Make this device available for Desktop") },
-                    description = { Text(text = "Wait for Desktop to send playback here") },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.download),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    },
-                    onClick = {
-                        runAndroidNockyConnectDiscovery(
-                            context = appContext,
-                            mode = AndroidNockyConnectDiscoveryMode.RECEIVE,
-                            playerConnection = playerConnection,
-                        )
-                    },
-                ),
-            ),
-        )
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
