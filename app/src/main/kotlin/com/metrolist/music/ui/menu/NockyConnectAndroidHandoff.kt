@@ -185,6 +185,7 @@ internal fun startAndroidHandoffReceiver(
     localDeviceId: String,
     playerConnection: PlayerConnection?,
     silentTimeout: Boolean = false,
+    receiveTimeoutMs: Long = NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS,
 ) {
     val appContext = context.applicationContext
     if (!ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE.compareAndSet(false, true)) {
@@ -198,7 +199,7 @@ internal fun startAndroidHandoffReceiver(
         val message = try {
             val received = NockyConnectHandoffHttpReceiver.receiveOfferAndSnapshot(
                 localDeviceId = localDeviceId,
-                timeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS,
+                timeoutMs = receiveTimeoutMs,
             )
             val summary = NockyConnectPendingRestoreStore.save(
                 context = appContext,
