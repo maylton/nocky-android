@@ -55,10 +55,14 @@ import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
 private const val NOCKY_CONNECT_RECEIVE_TIMEOUT_MS = 15_000L
 private const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = 45_000L
+private const val NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS = 2_000L
 
 private enum class AndroidNockyConnectDiscoveryMode {
     SEND,
@@ -269,8 +273,7 @@ private fun sendAndroidSnapshotToDesktop(
         device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
             device.descriptor.handoffEndpoint != null
     } ?: error("No desktop handoff endpoint found")
-    val snapshot = connection.service.exportNockyConnectSnapshotForCurrentDevice()
-        ?: error("Current Android queue is empty")
+    val snapshot = exportCurrentAndroidSnapshotOnMainThread(connection)
     val snapshotJson = com.metrolist.music.connect.NockyConnectJson.encode(snapshot)
     val target = NockyConnectHandoffHttpClient.targetFromDiscoveredDevice(desktop)
     val offer = buildAndroidHandoffOffer(
@@ -295,6 +298,36 @@ private fun sendAndroidSnapshotToDesktop(
         ?.title
         ?: "queue"
     return "Nocky Connect: sent to ${desktop.descriptor.deviceName} · $currentTitle · ${snapshot.queue.items.size} items · ${target.url}"
+}
+
+private fun exportCurrentAndroidSnapshotOnMainThread(
+    playerConnection: PlayerConnection,
+): PlaybackSessionSnapshot {
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+        return playerConnection.service.exportNockyConnectSnapshotForCurrentDevice()
+            ?: error("Current Android queue is empty")
+    }
+
+    val latch = CountDownLatch(1)
+    val snapshot = AtomicReference<PlaybackSessionSnapshot?>()
+    val failure = AtomicReference<Throwable?>()
+    Handler(Looper.getMainLooper()).post {
+        try {
+            snapshot.set(playerConnection.service.exportNockyConnectSnapshotForCurrentDevice())
+        } catch (error: Throwable) {
+            failure.set(error)
+        } finally {
+            latch.countDown()
+        }
+    }
+
+    check(latch.await(NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+        "Timed out while reading Android player snapshot"
+    }
+    failure.get()?.let { error ->
+        throw IllegalStateException(error.message ?: error.javaClass.simpleName, error)
+    }
+    return snapshot.get() ?: error("Current Android queue is empty")
 }
 
 private fun buildAndroidHandoffOffer(
