@@ -36,11 +36,21 @@ import com.metrolist.music.connect.NOCKY_CONNECT_HANDOFF_PORT
 import com.metrolist.music.connect.NockyConnectDeviceDescriptor
 import com.metrolist.music.connect.NockyConnectDevicePlatform
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
+import com.metrolist.music.connect.NockyConnectHandoffEnvelope
+import com.metrolist.music.connect.NockyConnectHandoffHttpClient
+import com.metrolist.music.connect.NockyConnectHandoffHttpTarget
 import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
+import com.metrolist.music.connect.NockyConnectHandoffKind
+import com.metrolist.music.connect.NockyConnectHandoffPayload
+import com.metrolist.music.connect.NockyConnectHandoffResultStatus
 import com.metrolist.music.connect.NockyConnectHandoffTransport
 import com.metrolist.music.connect.NockyConnectPendingRestoreApplier
 import com.metrolist.music.connect.NockyConnectPendingRestoreStore
+import com.metrolist.music.connect.NockyConnectRestorePolicy
+import com.metrolist.music.connect.NockyConnectSnapshotSummary
 import com.metrolist.music.connect.NockyConnectUdpDiscovery
+import com.metrolist.music.connect.PlaybackSessionSnapshot
+import com.metrolist.music.connect.exportNockyConnectSnapshotForCurrentDevice
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
 import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
@@ -126,7 +136,7 @@ private fun NockyConnectPlayerSurface(
                             runAndroidNockyConnectDiscovery(
                                 context = context,
                                 mode = AndroidNockyConnectDiscoveryMode.SEND,
-                                playerConnection = null,
+                                playerConnection = playerConnection,
                             )
                         },
                     ),
@@ -230,6 +240,13 @@ private fun runAndroidNockyConnectDiscovery(
                     AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: no devices found"
                     AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: no desktop tried to connect"
                 }
+            } else if (mode == AndroidNockyConnectDiscoveryMode.SEND) {
+                sendAndroidSnapshotToDesktop(
+                    context = appContext,
+                    localDescriptor = descriptor,
+                    playerConnection = playerConnection,
+                    devices = devices,
+                )
             } else {
                 val names = devices
                     .take(3)
@@ -242,6 +259,80 @@ private fun runAndroidNockyConnectDiscovery(
 
         showNockyConnectToast(appContext, message)
     }.start()
+}
+
+private fun sendAndroidSnapshotToDesktop(
+    context: Context,
+    localDescriptor: NockyConnectDeviceDescriptor,
+    playerConnection: PlayerConnection?,
+    devices: List<com.metrolist.music.connect.NockyConnectDiscoveredDevice>,
+): String {
+    val connection = playerConnection ?: error("Android player is not connected")
+    val desktop = devices.firstOrNull { device ->
+        device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
+            device.descriptor.handoffEndpoint != null
+    } ?: error("No desktop handoff endpoint found")
+    val snapshot = connection.service.exportNockyConnectSnapshotForCurrentDevice()
+        ?: error("Current Android queue is empty")
+    val snapshotJson = com.metrolist.music.connect.NockyConnectJson.encode(snapshot)
+    val target = NockyConnectHandoffHttpClient.targetFromDiscoveredDevice(desktop)
+    val offer = buildAndroidHandoffOffer(
+        localDescriptor = localDescriptor,
+        receiver = desktop.descriptor,
+        snapshot = snapshot,
+    )
+    val result = NockyConnectHandoffHttpClient.sendOfferAndSnapshot(
+        target = target,
+        offer = offer,
+        snapshotJson = snapshotJson,
+    )
+    val resultPayload = result.payload as? NockyConnectHandoffPayload.Result
+    require(result.kind == NockyConnectHandoffKind.RESULT) {
+        "Unexpected desktop handoff response: ${result.kind}"
+    }
+    require(resultPayload?.status == NockyConnectHandoffResultStatus.RESTORED_PAUSED) {
+        "Desktop did not restore paused: ${resultPayload?.status}"
+    }
+    val currentTitle = snapshot.queue.items
+        .getOrNull(snapshot.queue.currentIndex.coerceIn(0, (snapshot.queue.items.size - 1).coerceAtLeast(0)))
+        ?.title
+        ?: "queue"
+    return "Nocky Connect: sent to ${desktop.descriptor.deviceName} · $currentTitle · ${snapshot.queue.items.size} items · ${target.url}"
+}
+
+private fun buildAndroidHandoffOffer(
+    localDescriptor: NockyConnectDeviceDescriptor,
+    receiver: NockyConnectDeviceDescriptor,
+    snapshot: PlaybackSessionSnapshot,
+): NockyConnectHandoffEnvelope {
+    val now = System.currentTimeMillis()
+    val offerId = "android-offer-$now"
+    val safeIndex = snapshot.queue.currentIndex.coerceIn(
+        0,
+        (snapshot.queue.items.size - 1).coerceAtLeast(0),
+    )
+    val current = snapshot.queue.items.getOrNull(safeIndex)
+    return NockyConnectHandoffEnvelope(
+        messageId = "android-offer-message-$now",
+        createdAtEpochMs = now,
+        kind = NockyConnectHandoffKind.OFFER,
+        payload = NockyConnectHandoffPayload.Offer(
+            offerId = offerId,
+            senderDeviceId = localDescriptor.deviceId,
+            senderDeviceName = localDescriptor.deviceName,
+            receiverDeviceId = receiver.deviceId,
+            snapshotSummary = NockyConnectSnapshotSummary(
+                source = snapshot.source,
+                currentTitle = current?.title,
+                currentArtist = current?.artists?.firstOrNull()?.name,
+                queueItems = snapshot.queue.items.size,
+                positionMs = snapshot.playback.positionMs,
+                durationMs = snapshot.playback.durationMs,
+                wasPlaying = snapshot.playback.state == com.metrolist.music.connect.NockyPlaybackState.PLAYING,
+            ),
+            restorePolicy = NockyConnectRestorePolicy.RESTORE_PAUSED,
+        ),
+    )
 }
 
 private fun startAndroidHandoffReceiver(
