@@ -630,7 +630,6 @@ fun PlayerMenu(
             Material3MenuGroup(
                 items =
                     buildList {
-                        add(nockyConnectPlayerMenuItem(onDismiss = onDismiss))
                         add(
                             Material3MenuItemData(
                                 title = { Text(text = stringResource(R.string.listen_together)) },
