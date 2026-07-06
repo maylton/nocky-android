@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 const val DEVICE_DESCRIPTOR_SCHEMA = "io.github.maylton.nocky.connect.DeviceDescriptor"
+const val NOCKY_CONNECT_HANDOFF_PORT = 35187
+const val NOCKY_CONNECT_HANDOFF_PATH = "/nocky-connect/handoff"
 
 @Serializable
 data class NockyConnectDeviceDescriptor(
@@ -71,7 +73,7 @@ enum class NockyConnectFeature {
 data class NockyConnectHandoffEndpoint(
     val transport: NockyConnectHandoffTransport,
     val port: Int,
-    val path: String = "/nocky-connect/handoff",
+    val path: String = NOCKY_CONNECT_HANDOFF_PATH,
 ) {
     init {
         require(port in 1..65_535) { "Invalid Nocky Connect handoff port: $port" }
