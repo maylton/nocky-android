@@ -1,15 +1,16 @@
 package com.metrolist.music.connect
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.toFile
 
 class NockyConnectFileStoreTest {
     @Test
     fun writesReadsAndListsSnapshots() {
-        val root = createTempDir(prefix = "nocky-connect-test")
+        val root = createTempDirectory(prefix = "nocky-connect-test").toFile()
         try {
             val store = NockyConnectFileStore(root)
             val snapshot = snapshot(sessionId = "session/with spaces", revision = 5L)
@@ -30,7 +31,7 @@ class NockyConnectFileStoreTest {
 
     @Test
     fun returnsNullWhenNoSnapshotsExist() {
-        val root = createTempDir(prefix = "nocky-connect-empty")
+        val root = createTempDirectory(prefix = "nocky-connect-empty").toFile()
         try {
             val store = NockyConnectFileStore(root)
 
