@@ -7,5 +7,12 @@
             android:exported="true"
             android:noHistory="true"
             android:theme="@style/Theme.Metrolist.Transparent" />
+
+        <activity
+            android:name=".connect.NockyConnectDebugImportActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.Metrolist.Transparent" />
     </application>
 </manifest>
