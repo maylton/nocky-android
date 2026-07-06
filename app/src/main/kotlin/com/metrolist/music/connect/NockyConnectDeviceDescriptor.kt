@@ -26,7 +26,12 @@ data class NockyConnectDeviceDescriptor(
         NockyConnectFeature.SNAPSHOT_EXPORT,
         NockyConnectFeature.SNAPSHOT_IMPORT_PAUSED,
         NockyConnectFeature.FILE_ROUND_TRIP,
+        NockyConnectFeature.LAN_PAIRING,
+        NockyConnectFeature.HANDOFF_ACK,
+        NockyConnectFeature.HANDOFF_OFFER,
     ),
+    @SerialName("handoff_endpoint")
+    val handoffEndpoint: NockyConnectHandoffEndpoint? = null,
 )
 
 @Serializable
@@ -57,6 +62,26 @@ enum class NockyConnectFeature {
 
     @SerialName("handoff_ack")
     HANDOFF_ACK,
+
+    @SerialName("handoff_offer")
+    HANDOFF_OFFER,
+}
+
+@Serializable
+data class NockyConnectHandoffEndpoint(
+    val transport: NockyConnectHandoffTransport,
+    val port: Int,
+    val path: String = "/nocky-connect/handoff",
+) {
+    init {
+        require(port in 1..65_535) { "Invalid Nocky Connect handoff port: $port" }
+    }
+}
+
+@Serializable
+enum class NockyConnectHandoffTransport {
+    @SerialName("local_http")
+    LOCAL_HTTP,
 }
 
 object NockyConnectDeviceDescriptorJson {
