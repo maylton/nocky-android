@@ -69,7 +69,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 private const val NOCKY_CONNECT_SEND_TIMEOUT_MS = 6_000L
-private const val NOCKY_CONNECT_RECEIVE_TIMEOUT_MS = 15_000L
 private const val NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS = 60_000L
 private const val NOCKY_CONNECT_DEVICE_STALE_AFTER_MS = 300_000L
 private const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = 45_000L
@@ -83,11 +82,6 @@ private data class AndroidNockyConnectCachedDevice(
     val device: NockyConnectDiscoveredDevice,
     val lastSeenEpochMs: Long,
 )
-
-private enum class AndroidNockyConnectDiscoveryMode {
-    SEND,
-    RECEIVE,
-}
 
 @Composable
 fun nockyConnectPlayerMenuItem(
@@ -430,69 +424,6 @@ private fun sendAndroidSnapshotToSelectedDesktop(
             "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}"
         }
         showNockyConnectToast(context.applicationContext, message)
-    }.start()
-}
-
-private fun runAndroidNockyConnectDiscovery(
-    context: Context,
-    mode: AndroidNockyConnectDiscoveryMode,
-    playerConnection: PlayerConnection?,
-) {
-    val appContext = context.applicationContext
-    val startingMessage = when (mode) {
-        AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: scanning for up to 6 seconds…"
-        AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: waiting up to 15 seconds…"
-    }
-    Toast.makeText(appContext, startingMessage, Toast.LENGTH_SHORT).show()
-
-    Thread {
-        val message = try {
-            val descriptor = buildAndroidNockyConnectDescriptor(
-                context = appContext,
-                advertiseHandoffEndpoint = mode == AndroidNockyConnectDiscoveryMode.RECEIVE,
-            )
-            if (mode == AndroidNockyConnectDiscoveryMode.RECEIVE) {
-                startAndroidHandoffReceiver(appContext, descriptor.deviceId, playerConnection)
-            }
-            if (mode == AndroidNockyConnectDiscoveryMode.RECEIVE && ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.get()) {
-                "Nocky Connect: this device is already available for Desktop"
-            } else {
-                val devices = when (mode) {
-                    AndroidNockyConnectDiscoveryMode.SEND -> NockyConnectUdpDiscovery.scanOnce(
-                        localDescriptor = descriptor,
-                        timeoutMs = NOCKY_CONNECT_SEND_TIMEOUT_MS,
-                    )
-                    AndroidNockyConnectDiscoveryMode.RECEIVE -> NockyConnectUdpDiscovery.receiveOnce(
-                        localDescriptor = descriptor,
-                        timeoutMs = NOCKY_CONNECT_RECEIVE_TIMEOUT_MS,
-                    )
-                }
-                if (devices.isNotEmpty()) {
-                    saveAndroidNockyConnectDeviceCache(devices)
-                }
-                if (devices.isEmpty()) {
-                    when (mode) {
-                        AndroidNockyConnectDiscoveryMode.SEND -> "Nocky Connect: no devices found"
-                        AndroidNockyConnectDiscoveryMode.RECEIVE -> "Nocky Connect: no desktop tried to connect"
-                    }
-                } else if (mode == AndroidNockyConnectDiscoveryMode.SEND) {
-                    sendAndroidSnapshotToDesktop(
-                        localDescriptor = descriptor,
-                        playerConnection = playerConnection,
-                        devices = devices,
-                    )
-                } else {
-                    val names = devices
-                        .take(3)
-                        .joinToString { device -> device.descriptor.deviceName }
-                    "Nocky Connect: found ${devices.size} device(s): $names"
-                }
-            }
-        } catch (error: Exception) {
-            "Nocky Connect failed: ${error.message ?: error.javaClass.simpleName}"
-        }
-
-        showNockyConnectToast(appContext, message)
     }.start()
 }
 
