@@ -109,7 +109,9 @@ fun MediaMetadata.toPortableQueueItem(
         playlistId = queueData.playlistIdOrNull(),
         browseId = queueData.browseIdOrNull(),
         title = title,
-        artists = artists.map { PortableArtist(id = it.id, name = it.name) },
+        artists = artists
+            .filterNot { it.name.isNockyConnectArtistSeparator() }
+            .map { PortableArtist(id = it.id, name = it.name.trim()) },
         album = album?.let { PortableAlbum(id = it.id, title = it.title) },
         durationMs = durationMs(),
         thumbnailUrl = thumbnailUrl,
@@ -123,6 +125,9 @@ fun MediaMetadata.toPortableQueueItem(
         },
     )
 }
+
+private fun String.isNockyConnectArtistSeparator(): Boolean =
+    trim().lowercase() in setOf("", ",", "&", "e", "and", "feat.", "feat", "ft.", "ft")
 
 private fun MediaMetadata.durationMs(): Long? =
     duration.takeIf { it > 0 }?.toLong()?.times(1_000L)
