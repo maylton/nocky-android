@@ -38,6 +38,7 @@ import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
+import kotlinx.coroutines.delay
 
 @Composable
 fun nockyConnectPlayerMenuItem(
@@ -79,6 +80,8 @@ private fun NockyConnectPlayerSurface(
     var failedDeviceId by remember { mutableStateOf<String?>(null) }
 
     fun refreshDevices() {
+        if (isScanning) return
+
         connectingDeviceId = null
         failedDeviceId = null
         startAndroidNockyConnectPresenceWindow(appContext, playerConnection)
@@ -86,12 +89,12 @@ private fun NockyConnectPlayerSurface(
         if (cached.isNotEmpty()) {
             devices = cached
             statusText = when (cached.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
-                0 -> "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
+                0 -> "Scanning for nearby devices… Android is visible to Desktop while this sheet is open."
                 1 -> "1 cached desktop available · refreshing…"
                 else -> "Cached desktops available · refreshing…"
             }
         } else {
-            statusText = "Scanning for nearby devices… Android is visible to Desktop for 60 seconds."
+            statusText = "Scanning for nearby devices… Android is visible to Desktop while this sheet is open."
         }
         isScanning = true
         scanAndroidNockyConnectDevices(appContext) { result, error ->
@@ -114,7 +117,7 @@ private fun NockyConnectPlayerSurface(
                 val foundDesktopCount = found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
                 val desktopCount = merged.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
                 statusText = when {
-                    desktopCount == 0 -> "No desktop found yet. Android stays visible for Desktop for 60 seconds."
+                    desktopCount == 0 -> "No desktop found yet. Android stays visible for Desktop while this sheet is open."
                     foundDesktopCount == 0 && desktopCount == 1 -> "1 recently seen desktop available"
                     foundDesktopCount == 0 -> "Recently seen desktops available"
                     desktopCount == 1 -> "1 desktop available"
@@ -125,7 +128,10 @@ private fun NockyConnectPlayerSurface(
     }
 
     LaunchedEffect(Unit) {
-        refreshDevices()
+        while (true) {
+            refreshDevices()
+            delay(NOCKY_CONNECT_SURFACE_REFRESH_INTERVAL_MS)
+        }
     }
 
     val desktopDevices = devices.filter { cached ->
@@ -241,7 +247,7 @@ private fun NockyConnectPlayerSurface(
                 }
                 add(
                     Material3MenuItemData(
-                        title = { Text(text = "Scan again") },
+                        title = { Text(text = if (isScanning) "Scanning…" else "Scan again") },
                         description = { Text(text = statusText) },
                         icon = {
                             Icon(
