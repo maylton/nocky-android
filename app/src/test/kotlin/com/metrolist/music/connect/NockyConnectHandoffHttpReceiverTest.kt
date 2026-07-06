@@ -28,6 +28,20 @@ class NockyConnectHandoffHttpReceiverTest {
     }
 
     @Test
+    fun decodesPostSnapshotRequest() {
+        val snapshot = sampleSnapshot()
+        val request = NockyConnectHttpRequest(
+            method = "POST",
+            path = NOCKY_CONNECT_SNAPSHOT_PATH,
+            body = NockyConnectJson.encode(snapshot),
+        )
+
+        val decoded = decodeSnapshotRequest(request)
+
+        assertEquals(snapshot, decoded)
+    }
+
+    @Test
     fun buildsAcceptedResponseForOffer() {
         val accept = acceptedResponseForOffer(
             envelope = sampleOfferEnvelope(),
@@ -41,8 +55,21 @@ class NockyConnectHandoffHttpReceiverTest {
         assertEquals("android-1", payload.receiverDeviceId)
     }
 
+    @Test
+    fun buildsResultResponseForSnapshot() {
+        val result = resultResponseForSnapshot(
+            offerEnvelope = sampleOfferEnvelope(),
+            nowEpochMs = 1_789_101L,
+        )
+
+        assertEquals(NockyConnectHandoffKind.RESULT, result.kind)
+        val payload = result.payload as NockyConnectHandoffPayload.Result
+        assertEquals("offer-1", payload.offerId)
+        assertEquals(NockyConnectHandoffResultStatus.RESTORED_PAUSED, payload.status)
+    }
+
     @Test(expected = IllegalArgumentException::class)
-    fun rejectsWrongPath() {
+    fun rejectsWrongOfferPath() {
         decodeOfferRequest(
             NockyConnectHttpRequest(
                 method = "POST",
@@ -51,6 +78,17 @@ class NockyConnectHandoffHttpReceiverTest {
                     NockyConnectHandoffEnvelope.serializer(),
                     sampleOfferEnvelope(),
                 ),
+            ),
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsWrongSnapshotPath() {
+        decodeSnapshotRequest(
+            NockyConnectHttpRequest(
+                method = "POST",
+                path = "/wrong",
+                body = NockyConnectJson.encode(sampleSnapshot()),
             ),
         )
     }
@@ -105,4 +143,34 @@ class NockyConnectHandoffHttpReceiverTest {
         )
         assertTrue(encoded.contains("handoff_offer"))
     }
+
+    private fun sampleSnapshot(): PlaybackSessionSnapshot = PlaybackSessionSnapshot(
+        sessionId = "snapshot-session-1",
+        revision = 1L,
+        originDeviceId = "desktop-1",
+        updatedAtEpochMs = 1_789_000L,
+        source = NockyConnectSource.YOUTUBE,
+        playback = PlaybackInfo(
+            state = NockyPlaybackState.PAUSED,
+            positionMs = 2_267L,
+            durationMs = 223_000L,
+        ),
+        queue = PortableQueue(
+            title = "Desktop queue",
+            currentIndex = 0,
+            repeatMode = NockyRepeatMode.OFF,
+            shuffleEnabled = false,
+            items = listOf(
+                PortableQueueItem(
+                    queueItemId = "youtube:video:video-1",
+                    source = NockyConnectSource.YOUTUBE,
+                    provider = "youtube_music",
+                    playableId = "video-1",
+                    title = "Juno",
+                    artists = listOf(PortableArtist(name = "Sabrina Carpenter")),
+                    durationMs = 223_000L,
+                ),
+            ),
+        ),
+    )
 }
