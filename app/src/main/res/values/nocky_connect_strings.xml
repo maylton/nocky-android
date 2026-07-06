@@ -5,4 +5,20 @@
     <string name="nocky_connect_send_to_desktop_desc">Export the current queue and position to a trusted Nocky Desktop.</string>
     <string name="nocky_connect_receive_from_desktop">Receive from desktop</string>
     <string name="nocky_connect_receive_from_desktop_desc">Prepare this phone to import a paused desktop session.</string>
+    <string name="nocky_connect_section_this_device">This device</string>
+    <string name="nocky_connect_section_available_devices">Available devices</string>
+    <string name="nocky_connect_this_device_android_desc">Android · playing on this device</string>
+    <string name="nocky_connect_scanning">Scanning…</string>
+    <string name="nocky_connect_no_desktop_found">No desktop found</string>
+    <string name="nocky_connect_scan_again">Scan again</string>
+    <string name="nocky_connect_status_scanning_visible">Scanning for nearby devices… Android is visible to Desktop while this sheet is open.</string>
+    <string name="nocky_connect_status_cached_desktop_one">1 cached desktop available · refreshing…</string>
+    <string name="nocky_connect_status_cached_desktop_many">Cached desktops available · refreshing…</string>
+    <string name="nocky_connect_status_discovery_failed">Discovery failed: %1$s</string>
+    <string name="nocky_connect_status_discovery_failed_cached">Discovery failed. Showing recently seen devices.</string>
+    <string name="nocky_connect_status_no_desktop_visible">No desktop found yet. Android stays visible for Desktop while this sheet is open.</string>
+    <string name="nocky_connect_status_recent_desktop_one">1 recently seen desktop available</string>
+    <string name="nocky_connect_status_recent_desktop_many">Recently seen desktops available</string>
+    <string name="nocky_connect_status_desktop_one">1 desktop available</string>
+    <string name="nocky_connect_status_desktop_many">Multiple desktops available</string>
 </resources>
