@@ -85,6 +85,9 @@ fun MusicService.prepareNockyConnectRestoreForCurrentDevice(
 fun MusicService.restoreNockyConnectSnapshotPaused(
     plan: NockyConnectRestorePlan,
 ) {
+    if (!isPlayerReady.value) return
+    if (plan.queue.items.isEmpty()) return
+
     val restoreQueue = ListQueue(
         title = plan.queue.title,
         items = plan.queue.items.map { it.toMediaItem() },
