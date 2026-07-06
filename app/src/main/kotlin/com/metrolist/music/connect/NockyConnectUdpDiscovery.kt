@@ -56,6 +56,24 @@ object NockyConnectUdpDiscovery {
         }
     }
 
+    fun receiveOnce(
+        localDescriptor: NockyConnectDeviceDescriptor,
+        timeoutMs: Long,
+    ): List<NockyConnectDiscoveredDevice> {
+        DatagramSocket(null).use { socket ->
+            socket.reuseAddress = true
+            socket.broadcast = true
+            socket.soTimeout = DISCOVERY_READ_TIMEOUT_MS
+            socket.bind(InetSocketAddress(NOCKY_CONNECT_DISCOVERY_PORT))
+
+            return collectDiscoveryReplies(
+                socket = socket,
+                localDescriptor = localDescriptor,
+                timeoutMs = timeoutMs,
+            )
+        }
+    }
+
     private fun collectDiscoveryReplies(
         socket: DatagramSocket,
         localDescriptor: NockyConnectDeviceDescriptor,
