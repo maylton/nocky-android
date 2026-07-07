@@ -25,6 +25,7 @@ class NockyConnectSnapshotRestorerTest {
         assertEquals("Second song", queue.items[1].title)
         assertEquals("set-video-2", queue.items[1].setVideoId)
         assertEquals(181, queue.items[1].duration)
+        assertEquals("https://example.com/second.jpg", queue.items[1].thumbnailUrl)
 
         assertFalse(playerState.playWhenReady)
         assertEquals(Player.REPEAT_MODE_ONE, playerState.repeatMode)
@@ -32,6 +33,15 @@ class NockyConnectSnapshotRestorerTest {
         assertEquals(42_000L, playerState.currentPosition)
         assertEquals(1, playerState.currentMediaItemIndex)
         assertEquals(Player.STATE_READY, playerState.playbackState)
+    }
+
+    @Test
+    fun usesYoutubeThumbnailFallbackWhenSnapshotContainsLocalDesktopPath() {
+        val snapshot = playbackSnapshot(firstThumbnailUrl = "/home/user/.cache/nocky/cover.jpg")
+
+        val queue = NockyConnectSnapshotRestorer.toPersistQueue(snapshot)
+
+        assertEquals("https://i.ytimg.com/vi/video-1/hqdefault.jpg", queue.items[0].thumbnailUrl)
     }
 
     @Test
@@ -50,6 +60,7 @@ class NockyConnectSnapshotRestorerTest {
         state: NockyPlaybackState = NockyPlaybackState.PAUSED,
         repeatMode: NockyRepeatMode = NockyRepeatMode.ALL,
         shuffleEnabled: Boolean = false,
+        firstThumbnailUrl: String? = "https://example.com/first.jpg",
     ) = PlaybackSessionSnapshot(
         sessionId = "restore-session",
         revision = 3L,
@@ -78,7 +89,7 @@ class NockyConnectSnapshotRestorerTest {
                     artists = listOf(PortableArtist(id = "artist-1", name = "Artist One")),
                     album = PortableAlbum(id = "album-1", title = "Album One"),
                     durationMs = 180_000L,
-                    thumbnailUrl = "https://example.com/first.jpg",
+                    thumbnailUrl = firstThumbnailUrl,
                 ),
                 PortableQueueItem(
                     queueItemId = "youtube:video:video-2",
