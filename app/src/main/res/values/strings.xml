@@ -3,7 +3,7 @@
 <!-- Upstream InnerTune strings -->
 <!-- Do not add new features here -->
 <!-- Try to re-use strings here, but be careful on its usage e.g. verb vs noun -->
-<!-- "InnerTune" is replaced with "Metrolist" -->
+<!-- "InnerTune" is replaced with "Nocky" for user-facing branding -->
 <!-- Translators: Do not modify this file for translations, use InnerTune's Weblate instead. -->
 
 <resources>
@@ -77,8 +77,8 @@
     <string name="liked_songs">Liked songs</string>
     <string name="downloaded_songs">Downloaded songs</string>
     <string name="playlist_is_empty">The playlist is empty</string>
-    <string name="remove_download_playlist_confirm">Do you really want to remove all \"%s\" playlist songs from the Downloaded Songs storage?</string>
-    <string name="delete_playlist_confirm">Do you really want to delete the playlist \"%s\"?</string>
+    <string name="remove_download_playlist_confirm">Do you really want to remove all "%s" playlist songs from the Downloaded Songs storage?</string>
+    <string name="delete_playlist_confirm">Do you really want to delete the playlist "%s"?</string>
 
     <!-- Button -->
     <string name="retry">Retry</string>
@@ -115,6 +115,9 @@
     <string name="action_sync">Sync</string>
     <string name="advanced">Advanced</string>
     <string name="tempo_and_pitch">Tempo and Pitch</string>
+    <string name="nocky_connect">Nocky Connect</string>
+    <string name="nocky_connect_desc">Continue this queue on another device</string>
+    <string name="nocky_connect_discovery_coming_soon">Nocky Connect: local discovery will be added next</string>
 
     <!-- Sort menu -->
     <string name="sort_by_create_date">Date added</string>
@@ -196,7 +199,7 @@
 
     <!-- Snackbar -->
     <string name="playlist_imported">Playlist imported</string>
-    <string name="removed_song_from_playlist">Removed \"%s\" from playlist</string>
+    <string name="removed_song_from_playlist">Removed "%s" from playlist</string>
     <string name="playlist_synced">Playlist synced</string>
     <string name="undo">Undo</string>
 
@@ -316,7 +319,7 @@
     <string name="search_history">Search history</string>
     <string name="pause_search_history">Pause search history</string>
     <string name="clear_search_history">Clear search history</string>
-    <string name="clear_search_history_confirm">Are you sure you want to clear all search history?</string>
+    <string name="clear_search_history_confirm">Are you sure you want to clear search history?</string>
     <string name="use_login_for_browse">Use login for browsing content</string>
     <string name="use_login_for_browse_desc">This can influence what content you see and for example shows premium-only albums if you are logged in with a Premium account</string>
     <string name="disable_screenshot">Disable screenshot</string>

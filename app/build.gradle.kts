@@ -103,7 +103,7 @@ android {
         targetSdk = 36
         versionCode = 149
         versionName = "13.6.0"
-        resValue("string", "app_name", appNameOverride ?: "Metrolist")
+        resValue("string", "app_name", appNameOverride ?: "Nocky")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -191,7 +191,7 @@ android {
             }
             isDebuggable = true
             if (appNameOverride == null) {
-                resValue("string", "app_name", "Metrolist Debug")
+                resValue("string", "app_name", "Nocky Debug")
             }
             signingConfig =
                 if (workflowDebugKeystoreFile != null) {

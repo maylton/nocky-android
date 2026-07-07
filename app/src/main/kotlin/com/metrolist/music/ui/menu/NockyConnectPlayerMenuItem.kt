@@ -1,0 +1,281 @@
+package com.metrolist.music.ui.menu
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.metrolist.music.LocalPlayerConnection
+import com.metrolist.music.R
+import com.metrolist.music.connect.NockyConnectDevicePlatform
+import com.metrolist.music.playback.PlayerConnection
+import com.metrolist.music.ui.component.LocalBottomSheetPageState
+import com.metrolist.music.ui.component.Material3MenuGroup
+import com.metrolist.music.ui.component.Material3MenuItemData
+import kotlinx.coroutines.delay
+
+@Composable
+fun nockyConnectPlayerMenuItem(
+    onDismiss: () -> Unit,
+): Material3MenuItemData {
+    val context = LocalContext.current
+    val appContext = context.applicationContext
+    val bottomSheetPageState = LocalBottomSheetPageState.current
+    val playerConnection = LocalPlayerConnection.current
+
+    DisposableEffect(appContext, playerConnection) {
+        startAndroidNockyConnectPresenceSession(appContext, playerConnection)
+        onDispose {
+            // Keep Nocky Connect available while the app process is alive.
+        }
+    }
+
+    return Material3MenuItemData(
+        title = { Text(text = stringResource(R.string.nocky_connect)) },
+        description = { Text(text = stringResource(R.string.nocky_connect_desc)) },
+        icon = {
+            Icon(
+                painter = painterResource(R.drawable.cast),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        onClick = {
+            bottomSheetPageState.show {
+                NockyConnectPlayerSurface(playerConnection = playerConnection)
+            }
+            onDismiss()
+        },
+    )
+}
+
+@Composable
+private fun NockyConnectPlayerSurface(
+    playerConnection: PlayerConnection?,
+) {
+    val context = LocalContext.current
+    val appContext = context.applicationContext
+    var devices by remember { mutableStateOf(emptyList<AndroidNockyConnectCachedDevice>()) }
+    var isScanning by remember { mutableStateOf(false) }
+    var statusText by remember {
+        mutableStateOf(appContext.getString(R.string.nocky_connect_status_scanning_visible))
+    }
+    var connectingDeviceId by remember { mutableStateOf<String?>(null) }
+    var deliveredDeviceId by remember { mutableStateOf<String?>(null) }
+    var failedDeviceId by remember { mutableStateOf<String?>(null) }
+
+    fun refreshDevices() {
+        if (isScanning) return
+
+        connectingDeviceId = null
+        deliveredDeviceId = null
+        failedDeviceId = null
+        val cached = loadAndroidNockyConnectDeviceCache()
+        if (cached.isNotEmpty()) {
+            devices = cached
+            statusText = when (cached.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }) {
+                0 -> appContext.getString(R.string.nocky_connect_status_scanning_visible)
+                1 -> appContext.getString(R.string.nocky_connect_status_cached_desktop_one)
+                else -> appContext.getString(R.string.nocky_connect_status_cached_desktop_many)
+            }
+        } else {
+            statusText = appContext.getString(R.string.nocky_connect_status_scanning_visible)
+        }
+        isScanning = true
+        scanAndroidNockyConnectDevices(appContext) { result, error ->
+            isScanning = false
+            if (error != null) {
+                val cachedDevices = loadAndroidNockyConnectDeviceCache()
+                devices = cachedDevices
+                statusText = if (cachedDevices.isEmpty()) {
+                    appContext.getString(
+                        R.string.nocky_connect_status_discovery_failed,
+                        error.message ?: error.javaClass.simpleName,
+                    )
+                } else {
+                    appContext.getString(R.string.nocky_connect_status_discovery_failed_cached)
+                }
+            } else {
+                val found = result.orEmpty()
+                if (found.isNotEmpty()) {
+                    saveAndroidNockyConnectDeviceCache(found)
+                }
+                val merged = loadAndroidNockyConnectDeviceCache()
+                devices = merged
+                val foundDesktopCount = found.count { it.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
+                val desktopCount = merged.count { it.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP }
+                statusText = when {
+                    desktopCount == 0 -> appContext.getString(R.string.nocky_connect_status_no_desktop_visible)
+                    foundDesktopCount == 0 && desktopCount == 1 -> appContext.getString(R.string.nocky_connect_status_recent_desktop_one)
+                    foundDesktopCount == 0 -> appContext.getString(R.string.nocky_connect_status_recent_desktop_many)
+                    desktopCount == 1 -> appContext.getString(R.string.nocky_connect_status_desktop_one)
+                    else -> appContext.getString(R.string.nocky_connect_status_desktop_many)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            refreshDevices()
+            delay(NOCKY_CONNECT_SURFACE_REFRESH_INTERVAL_MS)
+        }
+    }
+
+    val desktopDevices = devices.filter { cached ->
+        cached.device.descriptor.platform == NockyConnectDevicePlatform.LINUX_DESKTOP &&
+            cached.device.descriptor.handoffEndpoint != null
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.nocky_connect_surface_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+        )
+        Material3MenuGroup(
+            items = buildList {
+                add(
+                    Material3MenuItemData(
+                        title = {
+                            Text(
+                                text = stringResource(R.string.nocky_connect_this_phone),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        description = { Text(text = stringResource(R.string.nocky_connect_status_normal)) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.cast),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
+                    ),
+                )
+
+                if (desktopDevices.isEmpty()) {
+                    add(
+                        Material3MenuItemData(
+                            title = {
+                                Text(
+                                    text = if (isScanning) {
+                                        stringResource(R.string.nocky_connect_scanning)
+                                    } else {
+                                        stringResource(R.string.nocky_connect_no_desktop_found)
+                                    },
+                                )
+                            },
+                            description = { Text(text = statusText) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.cast),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                        ),
+                    )
+                } else {
+                    desktopDevices.forEach { cached ->
+                        val device = cached.device
+                        val deviceId = device.descriptor.deviceId
+                        add(
+                            Material3MenuItemData(
+                                title = {
+                                    Text(
+                                        text = device.descriptor.deviceName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                description = {
+                                    Text(
+                                        text = androidNockyConnectDeviceSubtitle(
+                                            context = appContext,
+                                            cached = cached,
+                                            isConnecting = connectingDeviceId == deviceId,
+                                            isDelivered = deliveredDeviceId == deviceId,
+                                            hasFailed = failedDeviceId == deviceId,
+                                        ),
+                                    )
+                                },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.cast),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                },
+                                onClick = {
+                                    connectingDeviceId = deviceId
+                                    deliveredDeviceId = null
+                                    failedDeviceId = null
+                                    sendAndroidSnapshotToSelectedDesktop(
+                                        context = appContext,
+                                        playerConnection = playerConnection,
+                                        device = device,
+                                    ) { result ->
+                                        connectingDeviceId = null
+                                        deliveredDeviceId = if (result.success) deviceId else null
+                                        failedDeviceId = if (result.success) null else deviceId
+                                    }
+                                },
+                            ),
+                        )
+                    }
+                }
+            },
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Material3MenuGroup(
+            items = listOf(
+                Material3MenuItemData(
+                    title = {
+                        Text(
+                            text = if (isScanning) {
+                                stringResource(R.string.nocky_connect_scanning)
+                            } else {
+                                stringResource(R.string.nocky_connect_find_devices)
+                            },
+                        )
+                    },
+                    description = { Text(text = stringResource(R.string.nocky_connect_find_devices_desc)) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.replay),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    },
+                    onClick = { refreshDevices() },
+                ),
+            ),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}

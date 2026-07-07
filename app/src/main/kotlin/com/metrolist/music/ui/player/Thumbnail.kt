@@ -572,7 +572,7 @@ private fun ThumbnailItem(
 
                 ThumbnailImage(
                     artworkUri = artworkUriToUse,
-                    cropArtwork = cropAlbumArt
+                    cropArtwork = cropAlbumArt || artworkUriToUse.isYouTubeFallbackThumbnail()
                 )
             }
             
@@ -639,6 +639,29 @@ private fun ThumbnailImage(
             modifier = Modifier.fillMaxSize()
         )
     }
+}
+
+private fun String?.isYouTubeFallbackThumbnail(): Boolean {
+    val value = this?.lowercase() ?: return false
+    if (!value.contains("i.ytimg.com/vi/") && !value.contains("img.youtube.com/vi/")) {
+        return false
+    }
+    val fileName = value
+        .substringAfter("/vi/", missingDelimiterValue = "")
+        .substringAfter('/', missingDelimiterValue = "")
+        .substringBefore('?')
+        .substringBefore('#')
+    return fileName in setOf(
+        "default.jpg",
+        "mqdefault.jpg",
+        "hqdefault.jpg",
+        "sddefault.jpg",
+        "maxresdefault.jpg",
+        "0.jpg",
+        "1.jpg",
+        "2.jpg",
+        "3.jpg",
+    )
 }
 
 /**

@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.metrolist.music.App
 import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
 import com.metrolist.music.constants.AccountNameKey
@@ -17,7 +16,6 @@ import com.metrolist.music.constants.DataSyncIdKey
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.VisitorDataKey
 import com.metrolist.music.utils.SyncUtils
-import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.safeDataStoreEdit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +38,7 @@ class AccountSettingsViewModel @Inject constructor(
             syncUtils.clearAllSyncedContent()
 
             // Then clear account preferences
-            App.forgetAccount(context)
+            forgetAccount(context)
 
             // Clear cookie in UI
             onCookieChange("")
@@ -66,7 +64,7 @@ class AccountSettingsViewModel @Inject constructor(
         withContext(Dispatchers.IO) {
             // Forget account first — clears cookie/auth from DataStore.
             // Once isLoggedIn() returns false, ALL sync operations will skip.
-            App.forgetAccount(context)
+            forgetAccount(context)
 
             // Now clear the local database. Any sync coroutines that observe
             // the empty state will check isLoggedIn() and skip silently.
@@ -81,7 +79,7 @@ class AccountSettingsViewModel @Inject constructor(
     suspend fun logoutKeepData(context: Context, onCookieChange: (String) -> Unit) {
         Timber.d("[LOGOUT_KEEP] ViewModel: logoutKeepData called")
         withContext(Dispatchers.IO) {
-            App.forgetAccount(context)
+            forgetAccount(context)
         }
         Timber.d("[LOGOUT_KEEP] ViewModel: Account forgotten, clearing cookie in UI")
         onCookieChange("")
@@ -121,6 +119,20 @@ class AccountSettingsViewModel @Inject constructor(
                 context.startActivity(intent)
                 Runtime.getRuntime().exit(0)
             }
+        }
+    }
+
+    private suspend fun forgetAccount(context: Context) {
+        val saved = context.safeDataStoreEdit { settings ->
+            settings.remove(InnerTubeCookieKey)
+            settings.remove(VisitorDataKey)
+            settings.remove(DataSyncIdKey)
+            settings.remove(AccountNameKey)
+            settings.remove(AccountEmailKey)
+            settings.remove(AccountChannelHandleKey)
+        }
+        if (!saved) {
+            Timber.e("forgetAccount: DataStore write failed")
         }
     }
 }

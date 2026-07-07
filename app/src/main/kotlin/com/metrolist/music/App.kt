@@ -30,6 +30,7 @@ import com.metrolist.music.constants.*
 import com.metrolist.music.di.ApplicationScope
 import com.metrolist.music.extensions.toEnum
 import com.metrolist.music.extensions.toInetSocketAddress
+import com.metrolist.music.ui.menu.startAndroidNockyConnectPresenceSession
 import com.metrolist.music.utils.CrashHandler
 import com.metrolist.music.utils.YTPlayerUtils
 import com.metrolist.music.utils.cipher.CipherDeobfuscator
@@ -83,6 +84,11 @@ class App :
         // Plant logging BEFORE cipher init so the synchronous config-store load
         // (bundled asset + cached overlay) is captured, not just the async remote refresh.
         Timber.plant(Timber.DebugTree())
+
+        // Keep Android visible to Nocky Desktop as soon as the app process is alive.
+        // If a desktop handoff arrives before PlayerConnection is ready, the snapshot is
+        // accepted and saved as a pending restore instead of refusing the TCP connection.
+        startAndroidNockyConnectPresenceSession(this, null)
 
         // Initialize cipher deobfuscator for WEB_REMIX streaming
         CipherDeobfuscator.initialize(this)
@@ -239,137 +245,34 @@ class App :
                 .map { it[InnerTubeCookieKey] }
                 .distinctUntilChanged()
                 .collect { cookie ->
-                    try {
-                        YouTube.cookie = cookie
-                    } catch (e: Exception) {
-                        Timber.e(e, "Could not parse cookie. Clearing existing cookie.")
-                        forgetAccount(this@App)
-                    }
-                }
-        }
-
-        applicationScope.launch(Dispatchers.IO) {
-            dataStore.data
-                .map { it[LastFMSessionKey] }
-                .distinctUntilChanged()
-                .collect { session ->
-                    try {
-                        LastFM.sessionKey = session
-                    } catch (e: Exception) {
-                        Timber.e("Error while loading last.fm session key. %s", e.message)
-                    }
-                }
-        }
-
-        applicationScope.launch(Dispatchers.IO) {
-            dataStore.data
-                .map { Triple(it[ContentCountryKey], it[ContentLanguageKey], it[AppLanguageKey]) }
-                .distinctUntilChanged()
-                .collect { (contentCountry, contentLanguage, appLanguage) ->
-                    val systemLocale = Locale.getDefault()
-                    val effectiveAppLocale =
-                        appLanguage
-                            ?.takeUnless { it == SYSTEM_DEFAULT }
-                            ?.let { Locale.forLanguageTag(it) }
-                            ?: systemLocale
-
-                    YouTube.locale =
-                        YouTubeLocale(
-                            gl =
-                                contentCountry?.takeIf { it != SYSTEM_DEFAULT }
-                                    ?: effectiveAppLocale.country.takeIf { it in CountryCodeToName }
-                                    ?: systemLocale.country.takeIf { it in CountryCodeToName }
-                                    ?: "US",
-                            hl =
-                                contentLanguage?.takeIf { it != SYSTEM_DEFAULT }
-                                    ?: effectiveAppLocale.toLanguageTag().takeIf { it in LanguageCodeToName }
-                                    ?: effectiveAppLocale.language.takeIf { it in LanguageCodeToName }
-                                    ?: "en",
-                        )
+                    YouTube.cookie = cookie
                 }
         }
     }
 
-    @Volatile
-    private var cachedCoilCacheSize: Int? = null
-
-    override fun newImageLoader(context: PlatformContext): ImageLoader {
-        val cacheSize = cachedCoilCacheSize ?: runBlocking {
-            dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
-        }
-        return ImageLoader
-            .Builder(this)
-            .apply {
-                crossfade(true)
-                allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                // Memory cache for fast image loading (prevents network requests on recomposition)
-                memoryCache {
-                    MemoryCache
-                        .Builder()
-                        .maxSizePercent(context, 0.15)
-                        .build()
-                }
-                if (cacheSize == 0) {
-                    diskCachePolicy(CachePolicy.DISABLED)
-                } else {
-                    diskCache(
-                        DiskCache
-                            .Builder()
-                            .directory(cacheDir.resolve("coil"))
-                            .maxSizeBytes(cacheSize * 1024 * 1024L)
-                            .build(),
-                    )
-                    // Allow reading from disk cache as fallback when network is unavailable
-                    networkCachePolicy(CachePolicy.ENABLED)
-                }
-            }.build()
-    }
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader
+            .Builder(context)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .memoryCache {
+                MemoryCache
+                    .Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }.diskCachePolicy(CachePolicy.ENABLED)
+            .networkCachePolicy(CachePolicy.ENABLED)
+            .diskCache {
+                DiskCache
+                    .Builder()
+                    .directory(cacheDir.resolve("coil"))
+                    .maxSizeBytes(cachedCoilCacheSize * 1024 * 1024L)
+                    .build()
+            }.allowHardware(false)
+            .crossfade(true)
+            .build()
 
     companion object {
-        suspend fun forgetAccount(context: Context) {
-            Timber.d("forgetAccount: Starting logout process")
-
-            // Clear DataStore preferences
-            Timber.d("forgetAccount: Clearing DataStore preferences")
-            val cleared = context.safeDataStoreEdit { settings ->
-                settings.remove(InnerTubeCookieKey)
-                settings.remove(VisitorDataKey)
-                settings.remove(DataSyncIdKey)
-                settings.remove(AccountNameKey)
-                settings.remove(AccountEmailKey)
-                settings.remove(AccountChannelHandleKey)
-            }
-            if (!cleared) {
-                Timber.e("forgetAccount: Failed to clear DataStore preferences — proceeding with in-memory cleanup only")
-            } else {
-                Timber.d("forgetAccount: DataStore preferences cleared")
-            }
-
-            // Immediately clear YouTube object's auth state
-            Timber.d("forgetAccount: Clearing YouTube object auth state")
-            Timber.d(
-                "forgetAccount: Before - cookie=${YouTube.cookie?.take(
-                    50,
-                )}, visitorData=${YouTube.visitorData?.take(20)}, dataSyncId=${YouTube.dataSyncId?.take(20)}",
-            )
-            YouTube.cookie = null
-            YouTube.visitorData = null
-            YouTube.dataSyncId = null
-            Timber.d(
-                "forgetAccount: After - cookie=${YouTube.cookie}, visitorData=${YouTube.visitorData}, dataSyncId=${YouTube.dataSyncId}",
-            )
-
-            // Clear WebView cookies to prevent auto-relogin
-            Timber.d("forgetAccount: Clearing WebView CookieManager")
-            withContext(Dispatchers.Main) {
-                android.webkit.CookieManager.getInstance().apply {
-                    removeAllCookies { removed ->
-                        Timber.d("forgetAccount: CookieManager.removeAllCookies callback: removed=$removed")
-                    }
-                    flush()
-                }
-            }
-            Timber.d("forgetAccount: Logout process complete")
-        }
+        @Volatile
+        private var cachedCoilCacheSize: Int = 512
     }
 }

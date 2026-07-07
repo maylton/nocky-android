@@ -120,6 +120,7 @@ import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.MediaMetadataListItem
 import com.metrolist.music.ui.menu.PlayerMenu
 import com.metrolist.music.ui.menu.QueueMenu
+import com.metrolist.music.ui.menu.nockyConnectPlayerMenuItem
 import com.metrolist.music.ui.menu.SelectionMediaMetadataMenu
 import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.utils.dataStore
@@ -173,6 +174,7 @@ fun Queue(
     val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
 
     val playerConnection = LocalPlayerConnection.current ?: return
+    val nockyConnectItem = nockyConnectPlayerMenuItem(onDismiss = {})
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
 
@@ -309,21 +311,16 @@ fun Queue(
                     )
 
                     PlayerQueueButton(
-                        icon = R.drawable.bedtime,
+                        icon = R.drawable.cast,
                         onClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer?.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
+                            nockyConnectItem.onClick?.invoke()
                         },
-                        isActive = sleepTimerEnabled,
-                        enabled = !isListenTogetherGuest,
+                        isActive = false,
+                        enabled = nockyConnectItem.onClick != null,
                         shape = middleShape,
                         modifier = Modifier.size(buttonSize),
                         textButtonColor = textButtonColor,
                         iconButtonColor = iconButtonColor,
-                        text = if (sleepTimerEnabled) makeTimeString(sleepTimerTimeLeft) else null,
                         iconSize = iconSize,
                         textBackgroundColor = TextBackgroundColor,
                         playerBackground = playerBackground,
@@ -456,15 +453,9 @@ fun Queue(
                     }
 
                     TextButton(
-                        enabled = !isListenTogetherGuest,
+                        enabled = nockyConnectItem.onClick != null,
                         onClick = {
-                            if (!isListenTogetherGuest) {
-                                if (sleepTimerEnabled) {
-                                    playerConnection.service.sleepTimer?.clear()
-                                } else {
-                                    showSleepTimerDialog = true
-                                }
-                            }
+                            nockyConnectItem.onClick?.invoke()
                         },
                         modifier = Modifier.weight(1.2f),
                     ) {
@@ -474,36 +465,20 @@ fun Queue(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.bedtime),
+                                painter = painterResource(id = R.drawable.cast),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                                 tint = TextBackgroundColor,
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            AnimatedContent(
-                                label = "sleepTimer",
-                                targetState = sleepTimerEnabled,
-                            ) { enabled ->
-                                if (enabled) {
-                                    Text(
-                                        text = makeTimeString(sleepTimerTimeLeft),
-                                        color = TextBackgroundColor,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.basicMarquee(),
-                                    )
-                                } else {
-                                    Text(
-                                        text = stringResource(id = R.string.sleep_timer),
-                                        color = TextBackgroundColor,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.basicMarquee(),
-                                    )
-                                }
-                            }
+                            Text(
+                                text = stringResource(id = R.string.nocky_connect),
+                                color = TextBackgroundColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.basicMarquee(),
+                            )
                         }
                     }
 
