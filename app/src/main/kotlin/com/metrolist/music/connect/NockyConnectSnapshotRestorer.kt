@@ -84,7 +84,7 @@ private fun PortableQueueItem.restoredThumbnailUrl(): String? {
     val safeUrl = thumbnailUrl?.trim()?.takeIf { it.isPortableHttpUrl() }
     if (safeUrl != null) return safeUrl.preferNockyConnectArtworkCandidate()
     return when (source) {
-        NockyConnectSource.YOUTUBE -> youtubeThumbnailUrl(playableId)
+        NockyConnectSource.YOUTUBE -> nockyConnectYoutubeThumbnailUrl(playableId)
         NockyConnectSource.LOCAL,
         NockyConnectSource.UNKNOWN,
         -> null
@@ -93,7 +93,7 @@ private fun PortableQueueItem.restoredThumbnailUrl(): String? {
 
 private fun String.preferNockyConnectArtworkCandidate(): String {
     val videoId = youtubeDefaultThumbnailVideoId() ?: return this
-    return youtubeThumbnailUrl(videoId)
+    return nockyConnectYoutubeThumbnailUrl(videoId)
 }
 
 private fun String.youtubeDefaultThumbnailVideoId(): String? {
@@ -131,7 +131,7 @@ private fun String.youtubeDefaultThumbnailVideoId(): String? {
 private fun String.isPortableHttpUrl(): Boolean =
     startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
 
-private fun youtubeThumbnailUrl(videoId: String): String? =
+private fun nockyConnectYoutubeThumbnailUrl(videoId: String): String? =
     videoId.trim().takeIf { it.isNotEmpty() }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
 
 private fun NockyConnectSource.toQueueType(): QueueType =
