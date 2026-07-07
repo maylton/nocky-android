@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -58,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -445,30 +447,50 @@ fun GridItem(
     fillMaxWidth: Boolean = false,
 ) {
     val gridHeight = currentGridThumbnailHeight()
+    val cardShape = RoundedCornerShape(28.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.86f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.46f)
+    val cardGlow =
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                Color.Transparent,
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.06f),
+            ),
+        )
+
     Column(
-        modifier = if (fillMaxWidth) {
-            modifier
+        modifier =
+            if (fillMaxWidth) {
+                modifier
+                    .padding(horizontal = 8.dp, vertical = 10.dp)
+                    .fillMaxWidth()
+            } else {
+                modifier
+                    .padding(horizontal = 8.dp, vertical = 10.dp)
+                    .width(gridHeight * thumbnailRatio + 24.dp)
+            }
+                .clip(cardShape)
+                .background(cardContainer, cardShape)
+                .background(cardGlow, cardShape)
+                .border(1.dp, cardBorder, cardShape)
                 .padding(12.dp)
-                .fillMaxWidth()
-        } else {
-            modifier
-                .padding(12.dp)
-                .width(gridHeight * thumbnailRatio)
-        }
     ) {
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
-            modifier = if (fillMaxWidth) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.height(gridHeight)
-            }
-                .aspectRatio(thumbnailRatio)
+            modifier =
+                if (fillMaxWidth) {
+                    Modifier.fillMaxWidth()
+                } else {
+                    Modifier.height(gridHeight)
+                }
+                    .aspectRatio(thumbnailRatio)
+                    .clip(RoundedCornerShape(20.dp)),
         ) {
             thumbnailContent()
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         title()
 
