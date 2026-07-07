@@ -29,6 +29,7 @@ Branch: `agent/nocky-android-surface-depth`
 - Surface roles gain subtle accent tinting.
 - Outline roles are strengthened for desktop-like card and menu borders.
 - Pure-black mode keeps the black base while preserving container steps.
+- Shared `surfaceContainer` and outline roles are strong enough for player chrome such as the mini-player shell.
 
 ### 3. Surface primitives and shell chrome
 
