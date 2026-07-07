@@ -110,11 +110,20 @@ fun MediaMetadata.toPortableQueueItem(
         browseId = queueData.browseIdOrNull(),
         title = title,
         artists = artists
-            .filterNot { it.name.isNockyConnectArtistSeparator() }
-            .map { PortableArtist(id = it.id, name = it.name.trim()) },
-        album = album?.let { PortableAlbum(id = it.id, title = it.title) },
+            .mapNotNull { artist ->
+                val name = artist.name.trim()
+                if (name.isNockyConnectArtistSeparator()) {
+                    null
+                } else {
+                    PortableArtist(id = artist.id, name = name)
+                }
+            }
+            .ifEmpty { listOf(PortableArtist(name = "Unknown artist")) },
+        album = album
+            ?.takeIf { it.title.isNotBlank() }
+            ?.let { PortableAlbum(id = it.id.takeIf { id -> id.isNotBlank() }, title = it.title) },
         durationMs = durationMs(),
-        thumbnailUrl = thumbnailUrl,
+        thumbnailUrl = portableThumbnailUrl(source = source, playableId = id, thumbnailUrl = thumbnailUrl),
         explicit = explicit,
         isVideo = isVideoSong,
         isEpisode = isEpisode,
@@ -131,6 +140,29 @@ private fun String.isNockyConnectArtistSeparator(): Boolean =
 
 private fun MediaMetadata.durationMs(): Long? =
     duration.takeIf { it > 0 }?.toLong()?.times(1_000L)
+
+private fun portableThumbnailUrl(
+    source: NockyConnectSource,
+    playableId: String,
+    thumbnailUrl: String?,
+): String? {
+    val safeUrl = thumbnailUrl?.trim()?.takeIf { it.isPortableHttpUrl() }
+    if (safeUrl != null) return safeUrl
+    return when (source) {
+        NockyConnectSource.YOUTUBE -> youtubeThumbnailUrl(playableId)
+        NockyConnectSource.LOCAL,
+        NockyConnectSource.UNKNOWN,
+        -> null
+    }
+}
+
+private fun String.isPortableHttpUrl(): Boolean =
+    startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
+
+internal fun youtubeThumbnailUrl(videoId: String): String? =
+    videoId
+        .takeIf { it.isNotBlank() }
+        ?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
 
 private fun queueItemIdFor(source: NockyConnectSource, playableId: String): String =
     when (source) {
