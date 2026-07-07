@@ -93,7 +93,7 @@ private fun PortableQueueItem.restoredThumbnailUrl(): String? {
 
 private fun String.preferNockyConnectArtworkCandidate(): String {
     val videoId = youtubeDefaultThumbnailVideoId() ?: return this
-    return nockyConnectYoutubeThumbnailUrl(videoId)
+    return nockyConnectYoutubeThumbnailUrl(videoId) ?: this
 }
 
 private fun String.youtubeDefaultThumbnailVideoId(): String? {
