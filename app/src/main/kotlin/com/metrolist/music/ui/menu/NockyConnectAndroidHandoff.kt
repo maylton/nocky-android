@@ -13,6 +13,7 @@ import com.metrolist.music.connect.NockyConnectHandoffHttpClient
 import com.metrolist.music.connect.NockyConnectHandoffHttpReceiver
 import com.metrolist.music.connect.NockyConnectHandoffKind
 import com.metrolist.music.connect.NockyConnectHandoffPayload
+import com.metrolist.music.connect.NockyConnectHandoffRestoreResult
 import com.metrolist.music.connect.NockyConnectHandoffResultStatus
 import com.metrolist.music.connect.NockyConnectPendingRestoreApplier
 import com.metrolist.music.connect.NockyConnectPendingRestoreStore
@@ -99,7 +100,8 @@ internal fun sendAndroidSnapshotToDesktop(
         appContext.getString(R.string.nocky_connect_error_unexpected_desktop_response, result.kind)
     }
     require(resultPayload?.status == NockyConnectHandoffResultStatus.RESTORED_PAUSED) {
-        appContext.getString(R.string.nocky_connect_error_desktop_restore_status, resultPayload?.status)
+        resultPayload?.errorMessage
+            ?: appContext.getString(R.string.nocky_connect_error_desktop_restore_status, resultPayload?.status)
     }
     val currentTitle = snapshot.queue.items
         .getOrNull(snapshot.queue.currentIndex.coerceIn(0, (snapshot.queue.items.size - 1).coerceAtLeast(0)))
@@ -196,32 +198,41 @@ internal fun startAndroidHandoffReceiver(
     }
 
     Thread {
+        val toastMessage = AtomicReference<String?>()
         val message = try {
-            val received = NockyConnectHandoffHttpReceiver.receiveOfferAndSnapshot(
+            NockyConnectHandoffHttpReceiver.receiveOfferAndSnapshot(
                 localDeviceId = localDeviceId,
                 timeoutMs = receiveTimeoutMs,
-            )
-            val summary = NockyConnectPendingRestoreStore.save(
-                context = appContext,
-                snapshot = received.snapshot,
-                restorePlan = received.restorePlan,
-            )
-            val currentPlayerConnection = playerConnection ?: ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.get()
-            if (currentPlayerConnection != null) {
-                Handler(Looper.getMainLooper()).post {
-                    applyPendingNockyConnectRestore(
+                restoreBeforeResult = { snapshot, restorePlan ->
+                    val summary = NockyConnectPendingRestoreStore.save(
                         context = appContext,
-                        playerConnection = currentPlayerConnection,
+                        snapshot = snapshot,
+                        restorePlan = restorePlan,
                     )
-                }
-                appContext.getString(R.string.nocky_connect_toast_desktop_snapshot_received)
-            } else {
-                appContext.getString(
-                    R.string.nocky_connect_toast_pending_restore_saved,
-                    summary.title,
-                    summary.itemCount,
-                )
-            }
+                    val currentPlayerConnection = playerConnection ?: ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.get()
+                    if (currentPlayerConnection == null) {
+                        val pendingMessage = appContext.getString(
+                            R.string.nocky_connect_toast_pending_restore_saved,
+                            summary.title,
+                            summary.itemCount,
+                        )
+                        toastMessage.set(pendingMessage)
+                        NockyConnectHandoffRestoreResult.failed(pendingMessage)
+                    } else {
+                        val applied = applyPendingNockyConnectRestoreBlocking(
+                            context = appContext,
+                            playerConnection = currentPlayerConnection,
+                        )
+                        toastMessage.set(applied.second)
+                        if (applied.first) {
+                            NockyConnectHandoffRestoreResult.restored()
+                        } else {
+                            NockyConnectHandoffRestoreResult.failed(applied.second)
+                        }
+                    }
+                },
+            )
+            toastMessage.get() ?: appContext.getString(R.string.nocky_connect_toast_desktop_snapshot_received)
         } catch (error: Exception) {
             if (silentTimeout && error is SocketTimeoutException) {
                 null
@@ -240,26 +251,61 @@ internal fun startAndroidHandoffReceiver(
     }.start()
 }
 
+private fun applyPendingNockyConnectRestoreBlocking(
+    context: Context,
+    playerConnection: PlayerConnection,
+): Pair<Boolean, String> {
+    val appContext = context.applicationContext
+
+    fun applyNow(): Pair<Boolean, String> =
+        try {
+            val summary = NockyConnectPendingRestoreApplier.applyPendingRestorePaused(
+                context = appContext,
+                playerConnection = playerConnection,
+            )
+            true to appContext.getString(
+                R.string.nocky_connect_toast_restored_paused,
+                summary.title,
+                summary.itemCount,
+            )
+        } catch (error: Exception) {
+            false to appContext.getString(
+                R.string.nocky_connect_toast_restore_failed,
+                error.message ?: error.javaClass.simpleName,
+            )
+        }
+
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+        return applyNow()
+    }
+
+    val latch = CountDownLatch(1)
+    val result = AtomicReference<Pair<Boolean, String>>()
+    Handler(Looper.getMainLooper()).post {
+        try {
+            result.set(applyNow())
+        } finally {
+            latch.countDown()
+        }
+    }
+
+    return if (latch.await(NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+        result.get() ?: (false to appContext.getString(R.string.nocky_connect_toast_restore_failed, "empty restore result"))
+    } else {
+        false to appContext.getString(
+            R.string.nocky_connect_toast_restore_failed,
+            "Android player did not apply the handoff in time",
+        )
+    }
+}
+
 private fun applyPendingNockyConnectRestore(
     context: Context,
     playerConnection: PlayerConnection,
 ) {
-    val appContext = context.applicationContext
-    val message = try {
-        val summary = NockyConnectPendingRestoreApplier.applyPendingRestorePaused(
-            context = appContext,
-            playerConnection = playerConnection,
-        )
-        appContext.getString(
-            R.string.nocky_connect_toast_restored_paused,
-            summary.title,
-            summary.itemCount,
-        )
-    } catch (error: Exception) {
-        appContext.getString(
-            R.string.nocky_connect_toast_restore_failed,
-            error.message ?: error.javaClass.simpleName,
-        )
-    }
-    Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+    val message = applyPendingNockyConnectRestoreBlocking(
+        context = context,
+        playerConnection = playerConnection,
+    ).second
+    Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
 }
