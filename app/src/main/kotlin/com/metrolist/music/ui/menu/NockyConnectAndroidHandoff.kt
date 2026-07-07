@@ -206,11 +206,12 @@ internal fun startAndroidHandoffReceiver(
                 snapshot = received.snapshot,
                 restorePlan = received.restorePlan,
             )
-            if (playerConnection != null) {
+            val currentPlayerConnection = playerConnection ?: ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.get()
+            if (currentPlayerConnection != null) {
                 Handler(Looper.getMainLooper()).post {
                     applyPendingNockyConnectRestore(
                         context = appContext,
-                        playerConnection = playerConnection,
+                        playerConnection = currentPlayerConnection,
                     )
                 }
                 appContext.getString(R.string.nocky_connect_toast_desktop_snapshot_received)
