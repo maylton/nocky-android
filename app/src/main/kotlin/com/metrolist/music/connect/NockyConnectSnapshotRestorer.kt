@@ -82,13 +82,50 @@ fun PortableQueueItem.toMediaMetadata(): MediaMetadata =
 
 private fun PortableQueueItem.restoredThumbnailUrl(): String? {
     val safeUrl = thumbnailUrl?.trim()?.takeIf { it.isPortableHttpUrl() }
-    if (safeUrl != null) return safeUrl
+    if (safeUrl != null) return safeUrl.preferHighResolutionYoutubeArtworkCandidate()
     return when (source) {
         NockyConnectSource.YOUTUBE -> youtubeThumbnailUrl(playableId)
         NockyConnectSource.LOCAL,
         NockyConnectSource.UNKNOWN,
         -> null
     }
+}
+
+private fun String.preferHighResolutionYoutubeArtworkCandidate(): String {
+    val videoId = youtubeDefaultThumbnailVideoId() ?: return this
+    return "https://i.ytimg.com/vi/$videoId/maxresdefault.jpg"
+}
+
+private fun String.youtubeDefaultThumbnailVideoId(): String? {
+    val marker = "/vi/"
+    val markerIndex = indexOf(marker, ignoreCase = true)
+    if (markerIndex < 0) return null
+    val host = substringBefore(marker, missingDelimiterValue = this)
+    if (!host.contains("i.ytimg.com", ignoreCase = true) &&
+        !host.contains("img.youtube.com", ignoreCase = true)
+    ) {
+        return null
+    }
+
+    val pathAfterMarker = substring(markerIndex + marker.length)
+    val videoId = pathAfterMarker.substringBefore('/').takeIf { it.isNotBlank() } ?: return null
+    val fileName = pathAfterMarker
+        .substringAfter('/', missingDelimiterValue = "")
+        .substringBefore('?')
+        .substringBefore('#')
+        .lowercase()
+    val defaultVideoThumbnailNames = setOf(
+        "default.jpg",
+        "mqdefault.jpg",
+        "hqdefault.jpg",
+        "sddefault.jpg",
+        "maxresdefault.jpg",
+        "0.jpg",
+        "1.jpg",
+        "2.jpg",
+        "3.jpg",
+    )
+    return videoId.takeIf { fileName in defaultVideoThumbnailNames }
 }
 
 private fun String.isPortableHttpUrl(): Boolean =
