@@ -13,6 +13,7 @@ import com.metrolist.music.connect.NockyConnectDiscoveredDevice
 import com.metrolist.music.connect.NockyConnectHandoffEndpoint
 import com.metrolist.music.connect.NockyConnectHandoffTransport
 import com.metrolist.music.connect.getOrCreateNockyConnectDeviceId
+import com.metrolist.music.playback.PlayerConnection
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -21,7 +22,7 @@ internal const val NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS = 60_000L
 internal const val NOCKY_CONNECT_SURFACE_REFRESH_INTERVAL_MS = 15_000L
 internal const val NOCKY_CONNECT_PRESENCE_POLL_TIMEOUT_MS = 2_000L
 internal const val NOCKY_CONNECT_PRESENCE_RESTART_DELAY_MS = 250L
-internal const val NOCKY_CONNECT_HANDOFF_RECEIVER_SLICE_TIMEOUT_MS = 5_000L
+internal const val NOCKY_CONNECT_HANDOFF_RECEIVER_SLICE_TIMEOUT_MS = 60_000L
 internal const val NOCKY_CONNECT_DEVICE_AVAILABLE_NOW_MS = 30_000L
 internal const val NOCKY_CONNECT_DEVICE_STALE_AFTER_MS = 300_000L
 internal const val NOCKY_CONNECT_HANDOFF_RECEIVE_TIMEOUT_MS = NOCKY_CONNECT_ANDROID_PRESENCE_WINDOW_MS + 5_000L
@@ -30,6 +31,7 @@ internal const val NOCKY_CONNECT_MAIN_THREAD_EXPORT_TIMEOUT_MS = 2_000L
 internal val ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE = AtomicBoolean(false)
 internal val ANDROID_NOCKY_CONNECT_HANDOFF_RECEIVER_ACTIVE = AtomicBoolean(false)
 internal val ANDROID_NOCKY_CONNECT_DEVICE_CACHE = AtomicReference<List<AndroidNockyConnectCachedDevice>>(emptyList())
+internal val ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION = AtomicReference<PlayerConnection?>(null)
 
 internal data class AndroidNockyConnectCachedDevice(
     val device: NockyConnectDiscoveredDevice,
