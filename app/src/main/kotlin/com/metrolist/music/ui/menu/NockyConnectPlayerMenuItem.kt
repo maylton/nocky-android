@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.metrolist.music.LocalPlayerConnection
@@ -43,9 +42,9 @@ fun nockyConnectPlayerMenuItem(
     val playerConnection = LocalPlayerConnection.current
 
     DisposableEffect(appContext, playerConnection) {
-        val presenceSession = startAndroidNockyConnectPresenceSession(appContext, playerConnection)
+        startAndroidNockyConnectPresenceSession(appContext, playerConnection)
         onDispose {
-            presenceSession?.stop()
+            // Keep Nocky Connect available while the app process is alive.
         }
     }
 
@@ -74,7 +73,6 @@ private fun NockyConnectPlayerSurface(
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
-    val localDeviceName = remember(appContext) { androidDeviceName(appContext) }
     var devices by remember { mutableStateOf(emptyList<AndroidNockyConnectCachedDevice>()) }
     var isScanning by remember { mutableStateOf(false) }
     var statusText by remember {
@@ -153,47 +151,33 @@ private fun NockyConnectPlayerSurface(
             .padding(horizontal = 8.dp),
     ) {
         Text(
-            text = stringResource(R.string.nocky_connect),
-            style = MaterialTheme.typography.headlineSmall,
+            text = stringResource(R.string.nocky_connect_surface_title),
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.nocky_connect_surface_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        SectionLabel(stringResource(R.string.nocky_connect_section_this_device))
-        Material3MenuGroup(
-            items = listOf(
-                Material3MenuItemData(
-                    title = {
-                        Text(
-                            text = "✓ $localDeviceName",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    description = { Text(text = stringResource(R.string.nocky_connect_this_device_android_desc)) },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.cast),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    },
-                ),
-            ),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        SectionLabel(stringResource(R.string.nocky_connect_section_available_devices))
         Material3MenuGroup(
             items = buildList {
+                add(
+                    Material3MenuItemData(
+                        title = {
+                            Text(
+                                text = stringResource(R.string.nocky_connect_this_phone),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        description = { Text(text = stringResource(R.string.nocky_connect_status_normal)) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.cast),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
+                    ),
+                )
+
                 if (desktopDevices.isEmpty()) {
                     add(
                         Material3MenuItemData(
@@ -265,43 +249,33 @@ private fun NockyConnectPlayerSurface(
                         )
                     }
                 }
-                add(
-                    Material3MenuItemData(
-                        title = {
-                            Text(
-                                text = if (isScanning) {
-                                    stringResource(R.string.nocky_connect_scanning)
-                                } else {
-                                    stringResource(R.string.nocky_connect_scan_again)
-                                },
-                            )
-                        },
-                        description = { Text(text = statusText) },
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.replay),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        },
-                        onClick = { refreshDevices() },
-                    ),
-                )
             },
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Material3MenuGroup(
+            items = listOf(
+                Material3MenuItemData(
+                    title = {
+                        Text(
+                            text = if (isScanning) {
+                                stringResource(R.string.nocky_connect_scanning)
+                            } else {
+                                stringResource(R.string.nocky_connect_find_devices)
+                            },
+                        )
+                    },
+                    description = { Text(text = stringResource(R.string.nocky_connect_find_devices_desc)) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.replay),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    },
+                    onClick = { refreshDevices() },
+                ),
+            ),
         )
         Spacer(modifier = Modifier.height(8.dp))
     }
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
 }
