@@ -289,21 +289,34 @@ private fun NewMiniPlayer(
     }
 
     // Memoize colors
+    val miniPlayerShape = RoundedCornerShape(34.dp)
     val backgroundColor = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
-        MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
+        MiniPlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surfaceContainerHigh
+        MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.42f)
+        MiniPlayerBackgroundStyle.BLUR -> MaterialTheme.colorScheme.surfaceContainerHigh
+        MiniPlayerBackgroundStyle.GRADIENT -> MaterialTheme.colorScheme.surfaceContainerHigh
+        MiniPlayerBackgroundStyle.PURE_BLACK -> Color(0xFF050508)
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT)
 
     val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
-    val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
+    val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outlineVariant
     val onSurfaceColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.onSurface
     val errorColor = if (forceLightColors) Color(0xFFFF6B6B) else MaterialTheme.colorScheme.error
+    val shellBorderColor = if (forceLightColors) {
+        Color.White.copy(alpha = 0.46f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)
+    }
+    val shellGlowBrush = Brush.horizontalGradient(
+        listOf(
+            primaryColor.copy(alpha = if (forceLightColors) 0.10f else 0.18f),
+            Color.Transparent,
+            MaterialTheme.colorScheme.tertiary.copy(alpha = if (forceLightColors) 0.06f else 0.12f),
+        ),
+    )
 
     Box(
         modifier =
@@ -380,11 +393,12 @@ private fun NewMiniPlayer(
             modifier =
                 Modifier
                     .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
-                    .height(64.dp)
+                    .height(68.dp)
                     .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
-                    .clip(RoundedCornerShape(32.dp))
+                    .clip(miniPlayerShape)
                     .background(color = backgroundColor)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+                    .background(brush = shellGlowBrush, shape = miniPlayerShape)
+                    .border(1.dp, shellBorderColor, miniPlayerShape)
                     .clickable(
                         interactionSource = interactionSource,
                         indication = LocalIndication.current,
@@ -582,7 +596,7 @@ private fun NewMiniPlayerPlayButton(
                 Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), CircleShape)
+                    .border(1.dp, primaryColor.copy(alpha = 0.50f), CircleShape)
                     .clickable {
                         if (isListenTogetherGuest) {
                             playerConnection.toggleMute()

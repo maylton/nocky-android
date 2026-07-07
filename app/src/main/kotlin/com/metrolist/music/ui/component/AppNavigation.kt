@@ -23,6 +23,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -30,6 +32,7 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.metrolist.music.ui.screens.Screens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -37,7 +40,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Immutable
 private data class NavItemState(
     val isSelected: Boolean,
-    val iconRes: Int
+    val iconRes: Int,
 )
 
 @Stable
@@ -61,15 +64,16 @@ fun AppNavigationRail(
     onItemClick: (Screens, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     pureBlack: Boolean = false,
-    onSearchLongClick: (() -> Unit)? = null
+    onSearchLongClick: (() -> Unit)? = null,
 ) {
-    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
+    val separatorColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (pureBlack) 0.28f else 0.36f)
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
     NavigationRail(
-        modifier = modifier,
-        containerColor = containerColor
+        modifier = modifier.nockyRailSeparator(separatorColor),
+        containerColor = containerColor,
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
@@ -123,9 +127,9 @@ fun AppNavigationRail(
                 icon = {
                     Icon(
                         painter = painterResource(id = iconRes),
-                        contentDescription = stringResource(screen.titleId)
+                        contentDescription = stringResource(screen.titleId),
                     )
-                }
+                },
             )
         }
 
@@ -141,17 +145,18 @@ fun AppNavigationBar(
     modifier: Modifier = Modifier,
     pureBlack: Boolean = false,
     slimNav: Boolean = false,
-    onSearchLongClick: (() -> Unit)? = null
+    onSearchLongClick: (() -> Unit)? = null,
 ) {
-    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
     val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val separatorColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (pureBlack) 0.28f else 0.36f)
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current
 
     NavigationBar(
-        modifier = modifier,
+        modifier = modifier.nockyBarSeparator(separatorColor),
         containerColor = containerColor,
-        contentColor = contentColor
+        contentColor = contentColor,
     ) {
         navigationItems.forEach { screen ->
             val isSelected = remember(currentRoute, screen.route) {
@@ -203,7 +208,7 @@ fun AppNavigationBar(
                 icon = {
                     Icon(
                         painter = painterResource(id = iconRes),
-                        contentDescription = stringResource(screen.titleId)
+                        contentDescription = stringResource(screen.titleId),
                     )
                 },
                 label = if (!slimNav) {
@@ -211,11 +216,32 @@ fun AppNavigationBar(
                         Text(
                             text = stringResource(screen.titleId),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
-                } else null
+                } else null,
             )
         }
     }
 }
+
+private fun Modifier.nockyBarSeparator(color: Color): Modifier =
+    drawBehind {
+        drawLine(
+            color = color,
+            start = Offset(0f, 0f),
+            end = Offset(size.width, 0f),
+            strokeWidth = 1.dp.toPx(),
+        )
+    }
+
+private fun Modifier.nockyRailSeparator(color: Color): Modifier =
+    drawBehind {
+        val x = size.width - 1.dp.toPx() / 2f
+        drawLine(
+            color = color,
+            start = Offset(x, 0f),
+            end = Offset(x, size.height),
+            strokeWidth = 1.dp.toPx(),
+        )
+    }

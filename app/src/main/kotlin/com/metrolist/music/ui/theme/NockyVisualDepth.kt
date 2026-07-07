@@ -23,18 +23,18 @@ internal fun ColorScheme.withNockyVisualDepth(
     val depth = if (darkTheme) {
         SurfaceDepth(
             lowest = if (pureBlack) Color.Black else surfaceContainerLowest.depthTint(accent, 0.018f),
-            low = if (pureBlack) Color(0xFF050508).depthTint(accent, 0.028f) else surfaceContainerLow.depthTint(accent, 0.030f),
-            normal = if (pureBlack) Color(0xFF0A0A0F).depthTint(accent, 0.044f) else surfaceContainer.depthTint(accent, 0.044f),
-            high = if (pureBlack) Color(0xFF101019).depthTint(accent, 0.058f) else surfaceContainerHigh.depthTint(accent, 0.058f),
-            highest = if (pureBlack) Color(0xFF171727).depthTint(accent, 0.074f) else surfaceContainerHighest.depthTint(accent, 0.074f),
+            low = if (pureBlack) Color(0xFF050508).depthTint(accent, 0.030f) else surfaceContainerLow.depthTint(accent, 0.034f),
+            normal = if (pureBlack) Color(0xFF0C0C14).depthTint(accent, 0.052f) else surfaceContainer.depthTint(accent, 0.052f),
+            high = if (pureBlack) Color(0xFF141422).depthTint(accent, 0.068f) else surfaceContainerHigh.depthTint(accent, 0.068f),
+            highest = if (pureBlack) Color(0xFF1C1C2F).depthTint(accent, 0.088f) else surfaceContainerHighest.depthTint(accent, 0.088f),
         )
     } else {
         SurfaceDepth(
             lowest = surfaceContainerLowest.depthTint(accent, 0.010f),
-            low = surfaceContainerLow.depthTint(accent, 0.014f),
-            normal = surfaceContainer.depthTint(accent, 0.020f),
-            high = surfaceContainerHigh.depthTint(accent, 0.028f),
-            highest = surfaceContainerHighest.depthTint(accent, 0.036f),
+            low = surfaceContainerLow.depthTint(accent, 0.016f),
+            normal = surfaceContainer.depthTint(accent, 0.026f),
+            high = surfaceContainerHigh.depthTint(accent, 0.036f),
+            highest = surfaceContainerHighest.depthTint(accent, 0.046f),
         )
     }
 
@@ -46,9 +46,9 @@ internal fun ColorScheme.withNockyVisualDepth(
         surfaceContainer = depth.normal,
         surfaceContainerHigh = depth.high,
         surfaceContainerHighest = depth.highest,
-        surfaceVariant = surfaceVariant.depthTint(accent, if (darkTheme) 0.055f else 0.030f),
-        outline = outline.towards(accent, if (darkTheme) 0.18f else 0.12f),
-        outlineVariant = outlineVariant.towards(accent, if (darkTheme) 0.24f else 0.16f),
+        surfaceVariant = surfaceVariant.depthTint(accent, if (darkTheme) 0.064f else 0.036f),
+        outline = outline.towards(accent, if (darkTheme) 0.24f else 0.16f),
+        outlineVariant = outlineVariant.towards(accent, if (darkTheme) 0.30f else 0.20f),
         primaryContainer = primaryContainer.depthTint(accent, if (darkTheme) 0.085f else 0.045f),
         secondaryContainer = secondaryContainer.depthTint(accent, if (darkTheme) 0.065f else 0.036f),
         tertiaryContainer = tertiaryContainer.depthTint(accent, if (darkTheme) 0.050f else 0.030f),
