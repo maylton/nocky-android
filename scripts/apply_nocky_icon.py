@@ -4,10 +4,9 @@
 Usage:
     python3 scripts/apply_nocky_icon.py /path/to/nocky-icon-1024.png
 
-The project already stores launcher mipmaps as WebP. This helper overwrites the
-existing WebP resources and removes same-name PNG duplicates plus adaptive icon
-XML overrides that would otherwise win over the generated WebP mipmaps on
-Android 12+ launchers.
+The project stores legacy launcher mipmaps as WebP. Android 12+ launchers prefer
+adaptive icons from mipmap-anydpi-v31, so this helper also writes a separate
+Nocky bitmap background resource used by the adaptive icon XMLs.
 """
 
 from __future__ import annotations
@@ -38,19 +37,7 @@ LAUNCHER_NAMES: tuple[str, ...] = (
     "ic_launcher_round",
     "ic_launcher_static",
     "ic_launcher_static_round",
-)
-
-ADAPTIVE_XML_DIRS: tuple[str, ...] = (
-    "mipmap-anydpi-v31",
-    "mipmap-anydpi-v26",
-    "mipmap-anydpi",
-)
-
-ADAPTIVE_XMLS: tuple[str, ...] = (
-    "ic_launcher.xml",
-    "ic_launcher_round.xml",
-    "ic_launcher_static.xml",
-    "ic_launcher_static_round.xml",
+    "nocky_launcher_background",
 )
 
 
@@ -74,28 +61,9 @@ def save_icon(source: Image.Image, density: str, size: int, name: str) -> Path:
     return output
 
 
-def remove_adaptive_xml_overrides() -> list[Path]:
-    removed: list[Path] = []
-    for directory_name in ADAPTIVE_XML_DIRS:
-        directory = RES_DIR / directory_name
-        if not directory.exists():
-            continue
-        for filename in ADAPTIVE_XMLS:
-            path = directory / filename
-            if path.exists():
-                path.unlink()
-                removed.append(path)
-    return removed
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate Nocky launcher icons.")
     parser.add_argument("source_icon", type=Path, help="Path to the 1024x1024 Nocky PNG icon")
-    parser.add_argument(
-        "--keep-adaptive-xml",
-        action="store_true",
-        help="Do not remove mipmap-anydpi adaptive icon XML overrides",
-    )
     args = parser.parse_args()
 
     if not args.source_icon.exists():
@@ -110,16 +78,9 @@ def main() -> int:
         for name in LAUNCHER_NAMES:
             generated.append(save_icon(source, density, size, name))
 
-    removed = [] if args.keep_adaptive_xml else remove_adaptive_xml_overrides()
-
     print("Generated launcher icons:")
     for path in generated:
         print(f"  {path.relative_to(ROOT)}")
-
-    if removed:
-        print("Removed adaptive XML overrides so the generated WebP mipmaps are used:")
-        for path in removed:
-            print(f"  {path.relative_to(ROOT)}")
 
     return 0
 
