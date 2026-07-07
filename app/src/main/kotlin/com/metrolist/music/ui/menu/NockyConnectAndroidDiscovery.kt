@@ -24,7 +24,7 @@ internal fun scanAndroidNockyConnectDevices(
         try {
             val descriptor = buildAndroidNockyConnectDescriptor(
                 context = context.applicationContext,
-                advertiseHandoffEndpoint = false,
+                advertiseHandoffEndpoint = true,
             )
             val devices = NockyConnectUdpDiscovery.scanOnce(
                 localDescriptor = descriptor,
