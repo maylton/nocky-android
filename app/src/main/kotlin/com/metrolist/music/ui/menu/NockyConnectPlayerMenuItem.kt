@@ -1,11 +1,3 @@
-/*
- * Nocky Connect player menu entry point.
- *
- * This file intentionally owns only the menu item UI and its temporary surface.
- * Device discovery, send/receive actions and confirmation flows are delegated
- * to small helpers in this package.
- */
-
 package com.metrolist.music.ui.menu
 
 import androidx.compose.foundation.layout.Column
@@ -80,6 +72,7 @@ private fun NockyConnectPlayerSurface(
         mutableStateOf(appContext.getString(R.string.nocky_connect_status_scanning_visible))
     }
     var connectingDeviceId by remember { mutableStateOf<String?>(null) }
+    var deliveredDeviceId by remember { mutableStateOf<String?>(null) }
     var failedDeviceId by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(appContext, playerConnection) {
@@ -93,6 +86,7 @@ private fun NockyConnectPlayerSurface(
         if (isScanning) return
 
         connectingDeviceId = null
+        deliveredDeviceId = null
         failedDeviceId = null
         val cached = loadAndroidNockyConnectDeviceCache()
         if (cached.isNotEmpty()) {
@@ -239,6 +233,7 @@ private fun NockyConnectPlayerSurface(
                                             context = appContext,
                                             cached = cached,
                                             isConnecting = connectingDeviceId == deviceId,
+                                            isDelivered = deliveredDeviceId == deviceId,
                                             hasFailed = failedDeviceId == deviceId,
                                         ),
                                     )
@@ -252,6 +247,7 @@ private fun NockyConnectPlayerSurface(
                                 },
                                 onClick = {
                                     connectingDeviceId = deviceId
+                                    deliveredDeviceId = null
                                     failedDeviceId = null
                                     sendAndroidSnapshotToSelectedDesktop(
                                         context = appContext,
@@ -259,6 +255,7 @@ private fun NockyConnectPlayerSurface(
                                         device = device,
                                     ) { result ->
                                         connectingDeviceId = null
+                                        deliveredDeviceId = if (result.success) deviceId else null
                                         failedDeviceId = if (result.success) null else deviceId
                                     }
                                 },
