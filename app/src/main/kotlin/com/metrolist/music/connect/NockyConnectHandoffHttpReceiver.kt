@@ -31,6 +31,22 @@ data class NockyConnectReceivedHandoffSnapshot(
     val remoteAddress: InetSocketAddress,
 )
 
+data class NockyConnectHandoffRestoreResult(
+    val status: NockyConnectHandoffResultStatus,
+    val errorMessage: String? = null,
+) {
+    companion object {
+        fun restored(): NockyConnectHandoffRestoreResult =
+            NockyConnectHandoffRestoreResult(NockyConnectHandoffResultStatus.RESTORED_PAUSED)
+
+        fun failed(message: String): NockyConnectHandoffRestoreResult =
+            NockyConnectHandoffRestoreResult(
+                status = NockyConnectHandoffResultStatus.FAILED,
+                errorMessage = message,
+            )
+    }
+}
+
 object NockyConnectHandoffHttpReceiver {
     fun receiveOne(
         localDeviceId: String,
@@ -64,6 +80,7 @@ object NockyConnectHandoffHttpReceiver {
     fun receiveOfferAndSnapshot(
         localDeviceId: String,
         timeoutMs: Long,
+        restoreBeforeResult: ((PlaybackSessionSnapshot, NockyConnectRestorePlan) -> NockyConnectHandoffRestoreResult)? = null,
     ): NockyConnectReceivedHandoffSnapshot {
         ServerSocket().use { server ->
             prepareServer(server, timeoutMs)
@@ -89,9 +106,13 @@ object NockyConnectHandoffHttpReceiver {
             val snapshot = decodeSnapshotRequest(snapshotRequest.request)
             val restorePlan = NockyConnectGateway(deviceIdProvider = { localDeviceId })
                 .prepareRestore(snapshot)
+            val restoreResult = restoreBeforeResult?.invoke(snapshot, restorePlan)
+                ?: NockyConnectHandoffRestoreResult.restored()
             val result = resultResponseForSnapshot(
                 offerEnvelope = offerEnvelope,
                 nowEpochMs = System.currentTimeMillis(),
+                status = restoreResult.status,
+                errorMessage = restoreResult.errorMessage,
             )
             writeJsonResponse(
                 output = snapshotRequest.output,
@@ -184,6 +205,8 @@ internal fun acceptedResponseForOffer(
 internal fun resultResponseForSnapshot(
     offerEnvelope: NockyConnectHandoffEnvelope,
     nowEpochMs: Long,
+    status: NockyConnectHandoffResultStatus = NockyConnectHandoffResultStatus.RESTORED_PAUSED,
+    errorMessage: String? = null,
 ): NockyConnectHandoffEnvelope {
     val offer = offerEnvelope.payload as? NockyConnectHandoffPayload.Offer
     requireNotNull(offer) { "Handoff offer payload expected" }
@@ -194,7 +217,8 @@ internal fun resultResponseForSnapshot(
         kind = NockyConnectHandoffKind.RESULT,
         payload = NockyConnectHandoffPayload.Result(
             offerId = offer.offerId,
-            status = NockyConnectHandoffResultStatus.RESTORED_PAUSED,
+            status = status,
+            errorMessage = errorMessage,
         ),
     )
 }
