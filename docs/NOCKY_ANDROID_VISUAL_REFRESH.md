@@ -44,6 +44,13 @@ Branch: `agent/nocky-android-surface-primitives`
 - Player chrome gets stronger shared surface and outline tokens.
 - The new mini-player shell now uses a raised container, stronger outline, subtle horizontal accent glow and a slightly taller capsule.
 
+### 4. Home media artwork pass
+
+Branch: `agent/nocky-android-home-cards-polish`
+
+- Media thumbnail corner radius moves from the old nearly-square 3 dp shape to a softer 12 dp radius.
+- This gives Home rows, grid cards and related media artwork a clearer Nocky/Material surface feel without changing data loading, click behavior or layout structure.
+
 ## Application plan
 
 Apply these primitives gradually and only after checking each screen locally:
@@ -71,6 +78,7 @@ Then manually check:
 - dynamic artwork color changes while playing;
 - Home, player, mini-player, Settings, menus and bottom sheets;
 - mini-player shell/background/border separation;
+- Home media artwork corners in grid rows, quick picks and recommendations;
 - bottom navigation bar and landscape/tablet navigation rail;
 - widget cards and play buttons in light/dark mode;
 - small phones and landscape/tablet mode;
