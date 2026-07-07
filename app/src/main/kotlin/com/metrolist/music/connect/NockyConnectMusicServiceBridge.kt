@@ -1,8 +1,9 @@
 package com.metrolist.music.connect
 
+import androidx.media3.common.MediaItem
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
-import com.metrolist.music.extensions.toMediaItem
+import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.PersistPlayerState
 import com.metrolist.music.models.PersistQueue
 import com.metrolist.music.playback.MusicService
@@ -90,7 +91,7 @@ fun MusicService.restoreNockyConnectSnapshotPaused(
 
     val restoreQueue = ListQueue(
         title = plan.queue.title,
-        items = plan.queue.items.map { it.toMediaItem() },
+        items = plan.queue.items.map { it.toNockyConnectMediaItem() },
         startIndex = plan.playerState.currentMediaItemIndex,
         position = plan.playerState.currentPosition,
     )
@@ -134,10 +135,35 @@ fun MusicService.restoreLatestNockyConnectSnapshotFilePaused(): NockyConnectRest
 private fun MusicService.currentPersistQueueForNockyConnect(): PersistQueue =
     PersistQueue(
         title = queueTitle,
-        items = player.mediaItems.mapNotNull { it.metadata },
+        items = player.mediaItems.mapNotNull { item -> item.metadata ?: item.mediaMetadataFallback() },
         mediaItemIndex = player.currentMediaItemIndex.coerceAtLeast(0),
         position = player.currentPosition.coerceAtLeast(0L),
     )
+
+private fun MediaItem.mediaMetadataFallback(): MediaMetadata? {
+    val metadata = mediaMetadata
+    val title = metadata.title?.toString()?.takeIf { it.isNotBlank() } ?: return null
+    val artist = metadata.artist?.toString()?.takeIf { it.isNotBlank() }
+        ?: metadata.subtitle?.toString()?.takeIf { it.isNotBlank() }
+        ?: "Unknown artist"
+    val artworkUri = metadata.artworkUri?.toString()
+        ?: metadata.extras?.getString("artwork_uri")
+    return MediaMetadata(
+        id = mediaId,
+        title = title,
+        artists = artist.split(',')
+            .map { name -> name.trim() }
+            .filter { name -> name.isNotEmpty() }
+            .map { name -> MediaMetadata.Artist(id = null, name = name) }
+            .ifEmpty { listOf(MediaMetadata.Artist(id = null, name = "Unknown artist")) },
+        duration = -1,
+        thumbnailUrl = artworkUri,
+        album = metadata.albumTitle
+            ?.toString()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { albumTitle -> MediaMetadata.Album(id = "", title = albumTitle) },
+    )
+}
 
 private fun MusicService.currentPersistPlayerStateForNockyConnect(): PersistPlayerState =
     PersistPlayerState(
@@ -145,7 +171,7 @@ private fun MusicService.currentPersistPlayerStateForNockyConnect(): PersistPlay
         repeatMode = player.repeatMode,
         shuffleModeEnabled = player.shuffleModeEnabled,
         volume = playerVolume.value,
-        currentPosition = player.currentPosition.coerceAtLeast(0L),
+        currentPosition = player.currentPosition.coerceAtLeast(0),
         currentMediaItemIndex = player.currentMediaItemIndex.coerceAtLeast(0),
         playbackState = player.playbackState,
     )
