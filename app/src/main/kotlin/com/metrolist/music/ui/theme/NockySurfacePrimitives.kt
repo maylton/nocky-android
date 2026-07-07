@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -167,12 +166,8 @@ private fun ColorScheme.surfaceSpec(
     NockySurfaceSpec(
         shape = shape,
         containerColor = containerColor,
-        contentColor = contentColorForContainer(containerColor),
+        contentColor = onSurface,
         border = BorderStroke(1.dp, outlineVariant.copy(alpha = outlineAlpha)),
         tonalElevation = tonalElevation,
         shadowElevation = shadowElevation,
     )
-
-@Composable
-private fun contentColorForContainer(containerColor: Color): Color =
-    CardDefaults.cardColors(containerColor = containerColor).contentColor
