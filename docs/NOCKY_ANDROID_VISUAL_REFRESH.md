@@ -41,6 +41,7 @@ Branch: `agent/nocky-android-surface-primitives`
 - Native window background colors reduce white/light flashes before Compose renders.
 - Widget fallback colors and the widget play button now use Nocky-oriented violet roles and a thin outline.
 - Navigation bar and rail use a slightly raised container role plus a thin Nocky separator.
+- Player chrome gets stronger shared surface and outline tokens before direct `MiniPlayer.kt` surgery.
 
 ## Application plan
 
