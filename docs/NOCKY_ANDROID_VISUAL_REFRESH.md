@@ -30,13 +30,15 @@ Branch: `agent/nocky-android-surface-depth`
 - Outline roles are strengthened for desktop-like card and menu borders.
 - Pure-black mode keeps the black base while preserving container steps.
 
-### 3. Surface primitives
+### 3. Surface primitives and shell chrome
 
 Branch: `agent/nocky-android-surface-primitives`
 
 - `NockySurfaceSpec` records the shared visual contract for a surface.
 - `NockySurfaceDefaults` defines island, card, raised card, menu, control and artwork defaults.
 - Reusable modifiers provide bordered surfaces, artwork frames and soft accent glow.
+- Native window background colors reduce white/light flashes before Compose renders.
+- Widget fallback colors and the widget play button now use Nocky-oriented violet roles and a thin outline.
 
 ## Application plan
 
@@ -64,5 +66,6 @@ Then manually check:
 - light, dark and pure-black modes;
 - dynamic artwork color changes while playing;
 - Home, player, mini-player, Settings, menus and bottom sheets;
+- widget cards and play buttons in light/dark mode;
 - small phones and landscape/tablet mode;
 - scrolling performance and touch targets.
