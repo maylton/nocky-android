@@ -57,7 +57,7 @@ internal fun PersistQueue.toListQueue(): ListQueue = ListQueue(
     position = position.coerceAtLeast(0L),
 )
 
-private fun MediaMetadata.toNockyConnectMediaItem(): MediaItem {
+internal fun MediaMetadata.toNockyConnectMediaItem(): MediaItem {
     val original = toMediaItem()
     val artworkUri = thumbnailUrl
         ?.trim()
@@ -72,8 +72,11 @@ private fun MediaMetadata.toNockyConnectMediaItem(): MediaItem {
     val mediaMetadata = original.mediaMetadata
         .buildUpon()
         .setTitle(title)
+        .setSubtitle(artistText)
         .setArtist(artistText)
         .setAlbumTitle(album?.title)
+        .setAlbumArtist(artists.firstOrNull()?.name)
+        .setDisplayTitle(title)
         .setArtworkUri(artworkUri)
         .build()
 
