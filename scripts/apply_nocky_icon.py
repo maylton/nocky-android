@@ -4,8 +4,9 @@
 Usage:
     python3 scripts/apply_nocky_icon.py /path/to/nocky-icon-1024.png
 
-The script intentionally writes the launcher resources locally instead of trying
- to keep binary PNGs in review prompts. Commit the generated files afterwards.
+The project already stores launcher mipmaps as WebP. This helper overwrites the
+existing WebP resources and removes same-name PNG duplicates to avoid Android
+resource merger conflicts.
 """
 
 from __future__ import annotations
@@ -57,9 +58,12 @@ def square_crop(image: Image.Image) -> Image.Image:
 def save_icon(source: Image.Image, density: str, size: int, name: str) -> Path:
     directory = RES_DIR / f"mipmap-{density}"
     directory.mkdir(parents=True, exist_ok=True)
-    output = directory / f"{name}.png"
+    png_duplicate = directory / f"{name}.png"
+    if png_duplicate.exists():
+        png_duplicate.unlink()
+    output = directory / f"{name}.webp"
     resized = source.resize((size, size), Image.Resampling.LANCZOS)
-    resized.save(output, optimize=True)
+    resized.save(output, "WEBP", quality=95, method=6)
     return output
 
 
@@ -105,7 +109,7 @@ def main() -> int:
         print(f"  {path.relative_to(ROOT)}")
 
     if removed:
-        print("Removed adaptive XML overrides so the generated PNG mipmaps are used:")
+        print("Removed adaptive XML overrides so the generated WebP mipmaps are used:")
         for path in removed:
             print(f"  {path.relative_to(ROOT)}")
 
