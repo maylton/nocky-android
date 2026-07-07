@@ -62,7 +62,37 @@ class NockyConnectSnapshotMapperTest {
         assertEquals("video-2", currentItem.playableId)
         assertEquals("set-video-2", currentItem.setVideoId)
         assertEquals("PL123", currentItem.playlistId)
+        assertEquals("https://example.com/second.jpg", currentItem.thumbnailUrl)
         assertNull(currentItem.local)
+    }
+
+    @Test
+    fun usesYoutubeThumbnailFallbackWhenArtworkIsMissingOrLocalOnly() {
+        val snapshot = NockyConnectSnapshotMapper.fromPersistedState(
+            queue = PersistQueue(
+                title = "Queue",
+                items = listOf(firstSong(thumbnailUrl = null), secondSong(thumbnailUrl = "/tmp/local-only.jpg")),
+                mediaItemIndex = 0,
+                position = 0L,
+                queueType = QueueType.YOUTUBE,
+            ),
+            playerState = PersistPlayerState(
+                playWhenReady = false,
+                repeatMode = Player.REPEAT_MODE_OFF,
+                shuffleModeEnabled = false,
+                volume = 1f,
+                currentPosition = 0L,
+                currentMediaItemIndex = 0,
+                playbackState = Player.STATE_READY,
+            ),
+            originDeviceId = "android-test-device",
+            sessionId = "artwork-session",
+            revision = 1L,
+            updatedAtEpochMs = 1_700_000_000_000L,
+        )
+
+        assertEquals("https://i.ytimg.com/vi/video-1/hqdefault.jpg", snapshot.queue.items[0].thumbnailUrl)
+        assertEquals("https://i.ytimg.com/vi/video-2/hqdefault.jpg", snapshot.queue.items[1].thumbnailUrl)
     }
 
     @Test
@@ -124,24 +154,25 @@ class NockyConnectSnapshotMapperTest {
         assertEquals(NockyConnectSource.LOCAL, snapshot.queue.items.single().source)
         assertNotNull(snapshot.queue.items.single().local)
         assertEquals("android-local-library", snapshot.queue.items.single().local?.libraryId)
+        assertNull(snapshot.queue.items.single().thumbnailUrl)
     }
 
-    private fun firstSong() = MediaMetadata(
+    private fun firstSong(thumbnailUrl: String? = "https://example.com/first.jpg") = MediaMetadata(
         id = "video-1",
         title = "First song",
         artists = listOf(MediaMetadata.Artist(id = "artist-1", name = "Artist One")),
         duration = 180,
-        thumbnailUrl = "https://example.com/first.jpg",
+        thumbnailUrl = thumbnailUrl,
         album = MediaMetadata.Album(id = "album-1", title = "Album One"),
         setVideoId = "set-video-1",
     )
 
-    private fun secondSong() = MediaMetadata(
+    private fun secondSong(thumbnailUrl: String? = "https://example.com/second.jpg") = MediaMetadata(
         id = "video-2",
         title = "Second song",
         artists = listOf(MediaMetadata.Artist(id = "artist-2", name = "Artist Two")),
         duration = 181,
-        thumbnailUrl = "https://example.com/second.jpg",
+        thumbnailUrl = thumbnailUrl,
         album = MediaMetadata.Album(id = "album-2", title = "Album Two"),
         setVideoId = "set-video-2",
     )
