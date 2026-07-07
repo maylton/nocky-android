@@ -3,6 +3,7 @@ package com.metrolist.music.connect
 import androidx.media3.common.Player
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class NockyConnectSnapshotRestorerTest {
@@ -36,17 +37,29 @@ class NockyConnectSnapshotRestorerTest {
     }
 
     @Test
-    fun usesYoutubeThumbnailFallbackWhenSnapshotContainsLocalDesktopPath() {
+    fun skipsYoutubeThumbnailFallbackWhenSnapshotContainsLocalDesktopPath() {
         val snapshot = playbackSnapshot(firstThumbnailUrl = "/home/user/.cache/nocky/cover.jpg")
 
         val queue = NockyConnectSnapshotRestorer.toPersistQueue(snapshot)
 
-        assertEquals("https://i.ytimg.com/vi/video-1/hqdefault.jpg", queue.items[0].thumbnailUrl)
+        assertNull(queue.items[0].thumbnailUrl)
     }
 
     @Test
-    fun keepsDefaultYoutubeVideoThumbnailsOnStandardArtworkCandidate() {
+    fun skipsDefaultYoutubeVideoThumbnailsForMusicArtwork() {
         val snapshot = playbackSnapshot(firstThumbnailUrl = "https://i.ytimg.com/vi/video-1/maxresdefault.jpg")
+
+        val queue = NockyConnectSnapshotRestorer.toPersistQueue(snapshot)
+
+        assertNull(queue.items[0].thumbnailUrl)
+    }
+
+    @Test
+    fun keepsDefaultYoutubeVideoThumbnailsForVideoItems() {
+        val snapshot = playbackSnapshot(
+            firstThumbnailUrl = "https://i.ytimg.com/vi/video-1/maxresdefault.jpg",
+            firstIsVideo = true,
+        )
 
         val queue = NockyConnectSnapshotRestorer.toPersistQueue(snapshot)
 
@@ -70,6 +83,7 @@ class NockyConnectSnapshotRestorerTest {
         repeatMode: NockyRepeatMode = NockyRepeatMode.ALL,
         shuffleEnabled: Boolean = false,
         firstThumbnailUrl: String? = "https://example.com/first.jpg",
+        firstIsVideo: Boolean = false,
     ) = PlaybackSessionSnapshot(
         sessionId = "restore-session",
         revision = 3L,
@@ -99,6 +113,7 @@ class NockyConnectSnapshotRestorerTest {
                     album = PortableAlbum(id = "album-1", title = "Album One"),
                     durationMs = 180_000L,
                     thumbnailUrl = firstThumbnailUrl,
+                    isVideo = firstIsVideo,
                 ),
                 PortableQueueItem(
                     queueItemId = "youtube:video:video-2",
