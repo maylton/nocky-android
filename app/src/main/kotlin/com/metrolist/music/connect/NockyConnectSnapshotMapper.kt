@@ -147,9 +147,8 @@ private fun portableThumbnailUrl(
     thumbnailUrl: String?,
 ): String? {
     val safeUrl = thumbnailUrl?.trim()?.takeIf { it.isPortableHttpUrl() }
-    if (safeUrl != null) return safeUrl
     return when (source) {
-        NockyConnectSource.YOUTUBE -> youtubeThumbnailUrl(playableId)
+        NockyConnectSource.YOUTUBE -> safeUrl ?: youtubeThumbnailUrl(playableId)
         NockyConnectSource.LOCAL,
         NockyConnectSource.UNKNOWN,
         -> null
