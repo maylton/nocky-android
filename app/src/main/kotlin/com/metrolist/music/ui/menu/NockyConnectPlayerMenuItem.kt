@@ -37,8 +37,17 @@ import kotlinx.coroutines.delay
 fun nockyConnectPlayerMenuItem(
     onDismiss: () -> Unit,
 ): Material3MenuItemData {
+    val context = LocalContext.current
+    val appContext = context.applicationContext
     val bottomSheetPageState = LocalBottomSheetPageState.current
     val playerConnection = LocalPlayerConnection.current
+
+    DisposableEffect(appContext, playerConnection) {
+        val presenceSession = startAndroidNockyConnectPresenceSession(appContext, playerConnection)
+        onDispose {
+            presenceSession?.stop()
+        }
+    }
 
     return Material3MenuItemData(
         title = { Text(text = stringResource(R.string.nocky_connect)) },
@@ -74,13 +83,6 @@ private fun NockyConnectPlayerSurface(
     var connectingDeviceId by remember { mutableStateOf<String?>(null) }
     var deliveredDeviceId by remember { mutableStateOf<String?>(null) }
     var failedDeviceId by remember { mutableStateOf<String?>(null) }
-
-    DisposableEffect(appContext, playerConnection) {
-        val presenceSession = startAndroidNockyConnectPresenceSession(appContext, playerConnection)
-        onDispose {
-            presenceSession?.stop()
-        }
-    }
 
     fun refreshDevices() {
         if (isScanning) return
