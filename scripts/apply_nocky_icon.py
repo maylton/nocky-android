@@ -5,8 +5,9 @@ Usage:
     python3 scripts/apply_nocky_icon.py /path/to/nocky-icon-1024.png
 
 The project already stores launcher mipmaps as WebP. This helper overwrites the
-existing WebP resources and removes same-name PNG duplicates to avoid Android
-resource merger conflicts.
+existing WebP resources and removes same-name PNG duplicates plus adaptive icon
+XML overrides that would otherwise win over the generated WebP mipmaps on
+Android 12+ launchers.
 """
 
 from __future__ import annotations
@@ -39,6 +40,12 @@ LAUNCHER_NAMES: tuple[str, ...] = (
     "ic_launcher_static_round",
 )
 
+ADAPTIVE_XML_DIRS: tuple[str, ...] = (
+    "mipmap-anydpi-v31",
+    "mipmap-anydpi-v26",
+    "mipmap-anydpi",
+)
+
 ADAPTIVE_XMLS: tuple[str, ...] = (
     "ic_launcher.xml",
     "ic_launcher_round.xml",
@@ -69,7 +76,8 @@ def save_icon(source: Image.Image, density: str, size: int, name: str) -> Path:
 
 def remove_adaptive_xml_overrides() -> list[Path]:
     removed: list[Path] = []
-    for directory in (RES_DIR / "mipmap-anydpi-v26", RES_DIR / "mipmap-anydpi"):
+    for directory_name in ADAPTIVE_XML_DIRS:
+        directory = RES_DIR / directory_name
         if not directory.exists():
             continue
         for filename in ADAPTIVE_XMLS:
