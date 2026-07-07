@@ -46,6 +46,7 @@ internal fun startAndroidNockyConnectPresenceSession(
     playerConnection: PlayerConnection?,
 ): AndroidNockyConnectPresenceSession? {
     val appContext = context.applicationContext
+    ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.set(playerConnection)
     if (!ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.compareAndSet(false, true)) {
         return null
     }
@@ -61,7 +62,7 @@ internal fun startAndroidNockyConnectPresenceSession(
                 startAndroidHandoffReceiver(
                     context = appContext,
                     localDeviceId = descriptor.deviceId,
-                    playerConnection = playerConnection,
+                    playerConnection = ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.get(),
                     silentTimeout = true,
                     receiveTimeoutMs = NOCKY_CONNECT_HANDOFF_RECEIVER_SLICE_TIMEOUT_MS,
                 )
@@ -79,6 +80,7 @@ internal fun startAndroidNockyConnectPresenceSession(
         } finally {
             isRunning.set(false)
             ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.set(false)
+            ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.set(null)
         }
     }.start()
 
@@ -90,6 +92,7 @@ internal fun startAndroidNockyConnectPresenceWindow(
     playerConnection: PlayerConnection?,
 ) {
     val appContext = context.applicationContext
+    ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.set(playerConnection)
     if (!ANDROID_NOCKY_CONNECT_PRESENCE_ACTIVE.compareAndSet(false, true)) {
         return
     }
@@ -103,7 +106,7 @@ internal fun startAndroidNockyConnectPresenceWindow(
             startAndroidHandoffReceiver(
                 context = appContext,
                 localDeviceId = descriptor.deviceId,
-                playerConnection = playerConnection,
+                playerConnection = ANDROID_NOCKY_CONNECT_PLAYER_CONNECTION.get(),
                 silentTimeout = true,
             )
             val devices = NockyConnectUdpDiscovery.receiveOnce(
