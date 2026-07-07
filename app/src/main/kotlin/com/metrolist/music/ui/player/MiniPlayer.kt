@@ -1016,35 +1016,42 @@ private fun LegacyMiniMediaInfo(
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f)),
-                    contentAlignment = Alignment.Center,
+                        .background(
+                            color = if (pureBlack) Color.Black else Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(ThumbnailCornerRadius),
+                        ),
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.alert_circle),
+                        painter = painterResource(R.drawable.info),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
             }
         }
 
         Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 6.dp),
         ) {
             Text(
                 text = mediaMetadata.title,
-                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.basicMarquee(),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (mediaMetadata.explicit) MIcon.Explicit()
-                Text(
-                    text = mediaMetadata.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (pureBlack) Color.White.copy(alpha = 0.75f) else MaterialTheme.colorScheme.secondary,
+
+             if (mediaMetadata.artists.any { it.name.isNotBlank() }) {
+                 Text(
+                     text = mediaMetadata.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name },
+                     color = MaterialTheme.colorScheme.secondary,
+                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1052,6 +1059,10 @@ private fun LegacyMiniMediaInfo(
         }
     }
 }
+
+// ============================================================================
+// ISOLATED BUTTON COMPOSABLES - Prevent parent recomposition
+// ============================================================================
 
 @Composable
 private fun SubscribeButton(
@@ -1062,48 +1073,47 @@ private fun SubscribeButton(
     onSurfaceColor: Color,
 ) {
     val database = LocalDatabase.current
-    var isSubscribed by remember { mutableStateOf(false) }
+    val libraryArtist by database.artist(artistId).collectAsStateWithLifecycle(initialValue = null)
+    val isSubscribed = libraryArtist?.artist?.bookmarkedAt != null
 
-    androidx.compose.runtime.LaunchedEffect(artistId) {
-        isSubscribed = database.artistExist(artistId) != null
-    }
 
-    IconButton(
-        onClick = {
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                if (isSubscribed) {
-                    database.query {
-                        delete(ArtistEntity(id = artistId))
-                    }
-                    isSubscribed = false
-                } else {
-                    database.query {
-                        upsert(
-                            ArtistEntity(
-                                id = artistId,
-                                name = metadata.artists.firstOrNull()?.name ?: "",
-                                channelId = artistId,
-                                bookmarkedAt = java.time.LocalDateTime.now(),
-                            )
-                        )
-                    }
-                    isSubscribed = true
-                }
-            }
-        },
+    Box(
+        contentAlignment = Alignment.Center,
         modifier =
             Modifier
-                .size(42.dp)
+                .size(40.dp)
+                .clip(CircleShape)
                 .border(
                     width = 1.dp,
                     color = if (isSubscribed) primaryColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
                     shape = CircleShape,
-                ),
+                ).background(
+                    color = if (isSubscribed) primaryColor.copy(alpha = 0.1f) else Color.Transparent,
+                    shape = CircleShape,
+                ).clickable {
+                    database.transaction {
+                        val artist = libraryArtist?.artist
+                        if (artist != null) {
+                            update(artist.toggleLike())
+                        } else {
+                            metadata.artists.firstOrNull()?.let { artistInfo ->
+                                insert(
+                                    ArtistEntity(
+                                        id = artistInfo.id ?: "",
+                                        name = artistInfo.name,
+                                        channelId = null,
+                                        thumbnailUrl = null,
+                                    ).toggleLike(),
+                                )
+                            }
+                        }
+                    }
+                },
     ) {
         Icon(
-            painter = painterResource(if (isSubscribed) R.drawable.person_check else R.drawable.person),
+            painter = painterResource(if (isSubscribed) R.drawable.subscribed else R.drawable.subscribe),
             contentDescription = null,
-            tint = if (isSubscribed) primaryColor else onSurfaceColor.copy(alpha = 0.8f),
+            tint = if (isSubscribed) primaryColor else onSurfaceColor.copy(alpha = 0.7f),
             modifier = Modifier.size(20.dp),
         )
     }
@@ -1114,23 +1124,32 @@ private fun AddToPlaylistButton(
     onClick: () -> Unit,
     outlineColor: Color,
     onSurfaceColor: Color,
-) {
-    IconButton(
-        onClick = onClick,
-        modifier =
-            Modifier
-                .size(42.dp)
-                .border(
-                    width = 1.dp,
-                    color = outlineColor.copy(alpha = 0.3f),
-                    shape = CircleShape,
-                ),
+)
+
+{
+    val contentDescription = stringResource(R.string.add_to_playlist_desc)
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .border(
+                width = 1.dp,
+                color = outlineColor.copy(alpha = 0.3f),
+                shape = CircleShape,
+            )
+            .background(
+                color = Color.Transparent,
+                shape = CircleShape,
+            )
+            .clickable { onClick() },
     ) {
         Icon(
             painter = painterResource(R.drawable.add),
-            contentDescription = null,
-            tint = onSurfaceColor.copy(alpha = 0.8f),
-            modifier = Modifier.size(22.dp),
+            contentDescription = contentDescription,
+            tint = onSurfaceColor.copy(alpha = 0.7f),
+            modifier = Modifier.size(20.dp),
         )
     }
 }
@@ -1143,42 +1162,32 @@ private fun FavoriteButton(
     onSurfaceColor: Color,
 ) {
     val database = LocalDatabase.current
-    var isLiked by remember { mutableStateOf(false) }
+    val playerConnection = LocalPlayerConnection.current ?: return
+    val librarySong by database.song(songId).collectAsStateWithLifecycle(initialValue = null)
+    // For episodes, show saved state (inLibrary); for songs, show liked state
+    val isEpisode = librarySong?.song?.isEpisode == true
+    val isLiked = if (isEpisode) librarySong?.song?.inLibrary != null else librarySong?.song?.liked == true
 
-    androidx.compose.runtime.LaunchedEffect(songId) {
-        isLiked = database.likedAt(songId) != null
-    }
-
-    IconButton(
-        onClick = {
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                if (isLiked) {
-                    database.query {
-                        unlike(songId)
-                    }
-                    isLiked = false
-                } else {
-                    database.query {
-                        like(songId)
-                    }
-                    isLiked = true
-                }
-            }
-        },
+    Box(
+        contentAlignment = Alignment.Center,
         modifier =
             Modifier
-                .size(42.dp)
+                .size(40.dp)
+                .clip(CircleShape)
                 .border(
                     width = 1.dp,
                     color = if (isLiked) errorColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.3f),
                     shape = CircleShape,
-                ),
+                ).background(
+                    color = if (isLiked) errorColor.copy(alpha = 0.1f) else Color.Transparent,
+                    shape = CircleShape,
+                ).clickable { playerConnection.service.toggleLike() },
     ) {
         Icon(
-            painter = painterResource(if (isLiked) R.drawable.heart else R.drawable.heart_outline),
+            painter = painterResource(if (isLiked) R.drawable.favorite else R.drawable.favorite_border),
             contentDescription = null,
-            tint = if (isLiked) errorColor else onSurfaceColor.copy(alpha = 0.8f),
-            modifier = Modifier.size(22.dp),
+            tint = if (isLiked) errorColor else onSurfaceColor.copy(alpha = 0.7f),
+            modifier = Modifier.size(20.dp),
         )
     }
 }
