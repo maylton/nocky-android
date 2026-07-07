@@ -1,8 +1,3 @@
-/**
- * Metrolist Project (C) 2026
- * Licensed under GPL-3.0 | See git history for contributors
- */
-
 package com.metrolist.music.ui.theme
 
 import android.graphics.Bitmap
@@ -28,9 +23,9 @@ import com.materialkolor.score.Score
 val DefaultThemeColor = Color(0xFF8B7CFF)
 
 private val NockyShapes = Shapes(
-    extraSmall = RoundedCornerShape(12.dp),
-    small = RoundedCornerShape(16.dp),
-    medium = RoundedCornerShape(22.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
     large = RoundedCornerShape(28.dp),
     extraLarge = RoundedCornerShape(36.dp),
 )
@@ -50,10 +45,15 @@ fun MetrolistTheme(
     )
 
     val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
+        val nockyScheme = baseColorScheme.withNockyVisualDepth(
+            darkTheme = darkTheme,
+            pureBlack = pureBlack,
+        )
+
         if (darkTheme && pureBlack) {
-            baseColorScheme.pureBlack(true)
+            nockyScheme.pureBlack(true)
         } else {
-            baseColorScheme
+            nockyScheme
         }
     }
 
