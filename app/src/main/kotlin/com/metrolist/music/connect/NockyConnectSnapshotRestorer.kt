@@ -82,22 +82,18 @@ fun PortableQueueItem.toMediaMetadata(): MediaMetadata =
 
 private fun PortableQueueItem.restoredThumbnailUrl(): String? {
     val safeUrl = thumbnailUrl?.trim()?.takeIf { it.isPortableHttpUrl() }
-    if (safeUrl != null) return safeUrl.preferNockyConnectArtworkCandidate(isVideo = isVideo)
+    if (safeUrl != null) return safeUrl.preferNockyConnectArtworkCandidate()
     return when (source) {
-        NockyConnectSource.YOUTUBE -> nockyConnectYoutubeThumbnailUrl(playableId).takeIf { isVideo }
+        NockyConnectSource.YOUTUBE -> nockyConnectYoutubeThumbnailUrl(playableId)
         NockyConnectSource.LOCAL,
         NockyConnectSource.UNKNOWN,
         -> null
     }
 }
 
-private fun String.preferNockyConnectArtworkCandidate(isVideo: Boolean): String? {
+private fun String.preferNockyConnectArtworkCandidate(): String {
     val videoId = youtubeDefaultThumbnailVideoId() ?: return this
-    return if (isVideo) {
-        nockyConnectYoutubeThumbnailUrl(videoId) ?: this
-    } else {
-        null
-    }
+    return nockyConnectYoutubeThumbnailUrl(videoId) ?: this
 }
 
 private fun String.youtubeDefaultThumbnailVideoId(): String? {
