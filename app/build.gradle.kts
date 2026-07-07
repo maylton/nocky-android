@@ -158,7 +158,7 @@ android {
             storeFile = workflowDebugKeystoreFile ?: persistentDebugKeystoreFile
             storePassword = debugKeystorePassword
             keyAlias = debugKeyAlias
-            keyPassword = debugKeyAlias
+            keyPassword = debugKeyPassword
         }
         create("release") {
             storeFile = file("keystore/release.keystore")
@@ -340,7 +340,6 @@ dependencies {
 
     implementation(libs.activity)
     implementation(libs.hilt.navigation)
-    implementation(libs.kotlin.ksp)
     implementation(libs.datastore)
 
     implementation(libs.compose.runtime)
