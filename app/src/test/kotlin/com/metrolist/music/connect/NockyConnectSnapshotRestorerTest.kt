@@ -45,12 +45,12 @@ class NockyConnectSnapshotRestorerTest {
     }
 
     @Test
-    fun promotesDefaultYoutubeVideoThumbnailsToHighResolutionArtworkCandidates() {
-        val snapshot = playbackSnapshot(firstThumbnailUrl = "https://i.ytimg.com/vi/video-1/hqdefault.jpg")
+    fun keepsDefaultYoutubeVideoThumbnailsOnStandardArtworkCandidate() {
+        val snapshot = playbackSnapshot(firstThumbnailUrl = "https://i.ytimg.com/vi/video-1/maxresdefault.jpg")
 
         val queue = NockyConnectSnapshotRestorer.toPersistQueue(snapshot)
 
-        assertEquals("https://i.ytimg.com/vi/video-1/maxresdefault.jpg", queue.items[0].thumbnailUrl)
+        assertEquals("https://i.ytimg.com/vi/video-1/hqdefault.jpg", queue.items[0].thumbnailUrl)
     }
 
     @Test
