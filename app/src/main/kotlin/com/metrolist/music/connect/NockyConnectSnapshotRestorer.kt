@@ -51,25 +51,48 @@ fun PortableQueueItem.toMediaMetadata(): MediaMetadata =
     MediaMetadata(
         id = playableId,
         title = title,
-        artists = artists.map { artist ->
-            MediaMetadata.Artist(
-                id = artist.id,
-                name = artist.name,
-            )
-        },
+        artists = artists
+            .mapNotNull { artist ->
+                val name = artist.name.trim()
+                if (name.isBlank()) {
+                    null
+                } else {
+                    MediaMetadata.Artist(
+                        id = artist.id,
+                        name = name,
+                    )
+                }
+            }
+            .ifEmpty { listOf(MediaMetadata.Artist(id = null, name = "Unknown artist")) },
         duration = durationMs?.let { (it / 1_000L).toInt() } ?: -1,
-        thumbnailUrl = thumbnailUrl,
-        album = album?.let { album ->
-            MediaMetadata.Album(
-                id = album.id ?: "",
-                title = album.title,
-            )
-        },
+        thumbnailUrl = restoredThumbnailUrl(),
+        album = album
+            ?.takeIf { it.title.isNotBlank() }
+            ?.let { album ->
+                MediaMetadata.Album(
+                    id = album.id ?: "",
+                    title = album.title,
+                )
+            },
         setVideoId = setVideoId,
         musicVideoType = if (isVideo) "MUSIC_VIDEO_TYPE_OMV" else null,
         explicit = explicit,
         isEpisode = isEpisode,
     )
+
+private fun PortableQueueItem.restoredThumbnailUrl(): String? {
+    val safeUrl = thumbnailUrl?.trim()?.takeIf { it.isPortableHttpUrl() }
+    if (safeUrl != null) return safeUrl
+    return when (source) {
+        NockyConnectSource.YOUTUBE -> youtubeThumbnailUrl(playableId)
+        NockyConnectSource.LOCAL,
+        NockyConnectSource.UNKNOWN,
+        -> null
+    }
+}
+
+private fun String.isPortableHttpUrl(): Boolean =
+    startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
 
 private fun NockyConnectSource.toQueueType(): QueueType =
     when (this) {
