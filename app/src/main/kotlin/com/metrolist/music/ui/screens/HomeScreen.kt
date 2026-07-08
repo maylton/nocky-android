@@ -7,8 +7,10 @@ package com.metrolist.music.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -213,14 +215,18 @@ fun CommunityPlaylistCard(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val scope = rememberCoroutineScope()
-    val isDark = isSystemInDarkTheme()
-
-    val containerColor =
-        if (isDark) {
-            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        }
+    val cardShape = RoundedCornerShape(30.dp)
+    val artworkShape = RoundedCornerShape(18.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
+    val cardGlow =
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                Color.Transparent,
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.035f),
+            ),
+        )
 
     val dbPlaylist by database.playlistByBrowseId(item.playlist.id).collectAsStateWithLifecycle(initialValue = null)
     val isBookmarked = dbPlaylist?.playlist?.bookmarkedAt != null
@@ -232,13 +238,17 @@ fun CommunityPlaylistCard(
                 .height(420.dp),
         colors =
             CardDefaults.cardColors(
-                containerColor = containerColor,
+                containerColor = cardContainer,
             ),
-        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, cardBorder),
+        shape = cardShape,
         onClick = onClick,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(cardGlow),
         ) {
             Row(
                 modifier =
@@ -252,7 +262,9 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(100.dp)
-                            .clip(RoundedCornerShape(12.dp)),
+                            .clip(artworkShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.62f))
+                            .border(1.dp, cardBorder.copy(alpha = 0.72f), artworkShape),
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Row(modifier = Modifier.weight(1f)) {
@@ -358,7 +370,7 @@ fun CommunityPlaylistCard(
                             modifier =
                                 Modifier
                                     .size(56.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                                    .clip(RoundedCornerShape(14.dp)),
                             contentScale = ContentScale.Crop,
                         )
                         Column(modifier = Modifier.weight(1f)) {
@@ -398,7 +410,13 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_widget_play),
@@ -419,7 +437,13 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.radio),
@@ -479,7 +503,13 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
                 ) {
                     Icon(
                         painter = painterResource(if (isBookmarked) R.drawable.library_add_check else R.drawable.library_add),
@@ -530,8 +560,9 @@ fun DailyDiscoverCard(
                 ),
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f),
             ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)),
         shape = RoundedCornerShape(28.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -1186,6 +1217,7 @@ fun HomeScreen(
                     item(key = "chips_shimmer") {
                         ShimmerHost(showGradient = false) {
                             LazyRow(
+                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1220,6 +1252,7 @@ fun HomeScreen(
 
                         item(key = "00_your_shows_list") {
                             LazyRow(
+                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1245,6 +1278,7 @@ fun HomeScreen(
 
                         item(key = "00_episodes_for_later_list") {
                             LazyRow(
+                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1268,6 +1302,7 @@ fun HomeScreen(
 
                         item(key = "0_podcast_channels_list") {
                             LazyRow(
+                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1350,6 +1385,7 @@ fun HomeScreen(
 
                             item(key = "1_chip_section_list_${section.index}") {
                                 LazyRow(
+                                    modifier = Modifier.padding(bottom = 18.dp),
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)
@@ -1872,6 +1908,7 @@ fun HomeScreen(
 
                                 item(key = "community_playlists_content") {
                                     LazyRow(
+                                        modifier = Modifier.padding(bottom = 18.dp),
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     ) {
@@ -2055,6 +2092,7 @@ fun HomeScreen(
 
                                 item(key = "account_playlists_list") {
                                     LazyRow(
+                                        modifier = Modifier.padding(bottom = 18.dp),
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2235,6 +2273,7 @@ fun HomeScreen(
 
                                 item(key = "similar_to_list_${section.index}") {
                                     LazyRow(
+                                        modifier = Modifier.padding(bottom = 18.dp),
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2411,6 +2450,7 @@ fun HomeScreen(
                                     // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
                                     item(key = "home_section_list_${section.index}") {
                                         LazyRow(
+                                            modifier = Modifier.padding(bottom = 18.dp),
                                             contentPadding =
                                                 WindowInsets.systemBars
                                                     .only(WindowInsetsSides.Horizontal)
@@ -2444,6 +2484,7 @@ fun HomeScreen(
                                 }
                                 item(key = "mood_and_genres_list") {
                                     LazyHorizontalGrid(
+                                        modifier = Modifier.padding(bottom = 18.dp),
                                         rows = GridCells.Fixed(4),
                                         contentPadding = PaddingValues(6.dp),
                                         modifier =
@@ -2485,6 +2526,7 @@ fun HomeScreen(
                                             .width(250.dp),
                                 )
                                 LazyRow(
+                                    modifier = Modifier.padding(bottom = 18.dp),
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)

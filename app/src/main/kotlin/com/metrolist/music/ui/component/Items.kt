@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -58,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -445,30 +447,50 @@ fun GridItem(
     fillMaxWidth: Boolean = false,
 ) {
     val gridHeight = currentGridThumbnailHeight()
+    val cardShape = RoundedCornerShape(26.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
+    val cardGlow =
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.07f),
+                Color.Transparent,
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.04f),
+            ),
+        )
+
     Column(
-        modifier = if (fillMaxWidth) {
-            modifier
-                .padding(12.dp)
-                .fillMaxWidth()
-        } else {
-            modifier
-                .padding(12.dp)
-                .width(gridHeight * thumbnailRatio)
-        }
+        modifier =
+            if (fillMaxWidth) {
+                modifier
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+            } else {
+                modifier
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .width(gridHeight * thumbnailRatio + 18.dp)
+            }
+                .clip(cardShape)
+                .background(cardContainer, cardShape)
+                .background(cardGlow, cardShape)
+                .border(1.dp, cardBorder, cardShape)
+                .padding(10.dp)
     ) {
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
-            modifier = if (fillMaxWidth) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.height(gridHeight)
-            }
-                .aspectRatio(thumbnailRatio)
+            modifier =
+                if (fillMaxWidth) {
+                    Modifier.fillMaxWidth()
+                } else {
+                    Modifier.height(gridHeight)
+                }
+                    .aspectRatio(thumbnailRatio)
+                    .clip(RoundedCornerShape(18.dp)),
         ) {
             thumbnailContent()
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         title()
 
@@ -1265,7 +1287,7 @@ fun YouTubeGridItem(
          val subtitle = when (item) {
              is SongItem -> joinByBullet(item.artists.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, makeTimeString(item.duration?.times(1000L)))
              is AlbumItem -> joinByBullet(item.artists?.joinToArtistString(" ${stringResource(R.string.and)} ") { it.name }, item.year?.toString())
-            is ArtistItem -> null
+            is ArtistItem -> "\u00A0"
             is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
             is PodcastItem -> joinByBullet(item.author?.name, item.episodeCountText)
             is EpisodeItem -> joinByBullet(item.author?.name, makeTimeString(item.duration?.times(1000L)))

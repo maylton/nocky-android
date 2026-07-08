@@ -102,7 +102,7 @@ fun NavigationTitle(
             Icon(
                 painter = painterResource(R.drawable.arrow_forward),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f)
             )
         }
     }
