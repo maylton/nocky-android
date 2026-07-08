@@ -7,8 +7,10 @@ package com.metrolist.music.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -213,14 +215,18 @@ fun CommunityPlaylistCard(
     val listenTogetherManager = LocalListenTogetherManager.current
     val isListenTogetherGuest = listenTogetherManager?.let { it.isInRoom && !it.isHost } ?: false
     val scope = rememberCoroutineScope()
-    val isDark = isSystemInDarkTheme()
-
-    val containerColor =
-        if (isDark) {
-            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        }
+    val cardShape = RoundedCornerShape(30.dp)
+    val artworkShape = RoundedCornerShape(18.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
+    val cardGlow =
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                Color.Transparent,
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.035f),
+            ),
+        )
 
     val dbPlaylist by database.playlistByBrowseId(item.playlist.id).collectAsStateWithLifecycle(initialValue = null)
     val isBookmarked = dbPlaylist?.playlist?.bookmarkedAt != null
@@ -232,13 +238,17 @@ fun CommunityPlaylistCard(
                 .height(420.dp),
         colors =
             CardDefaults.cardColors(
-                containerColor = containerColor,
+                containerColor = cardContainer,
             ),
-        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, cardBorder),
+        shape = cardShape,
         onClick = onClick,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(cardGlow),
         ) {
             Row(
                 modifier =
@@ -252,7 +262,9 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(100.dp)
-                            .clip(RoundedCornerShape(12.dp)),
+                            .clip(artworkShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.62f))
+                            .border(1.dp, cardBorder.copy(alpha = 0.72f), artworkShape),
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Row(modifier = Modifier.weight(1f)) {
@@ -358,7 +370,7 @@ fun CommunityPlaylistCard(
                             modifier =
                                 Modifier
                                     .size(56.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                                    .clip(RoundedCornerShape(14.dp)),
                             contentScale = ContentScale.Crop,
                         )
                         Column(modifier = Modifier.weight(1f)) {
@@ -398,7 +410,7 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f), CircleShape),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_widget_play),
@@ -419,7 +431,7 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape),
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f), CircleShape),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.radio),
@@ -479,7 +491,7 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), CircleShape),
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f), CircleShape),
                 ) {
                     Icon(
                         painter = painterResource(if (isBookmarked) R.drawable.library_add_check else R.drawable.library_add),
@@ -530,8 +542,9 @@ fun DailyDiscoverCard(
                 ),
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f),
             ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)),
         shape = RoundedCornerShape(28.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

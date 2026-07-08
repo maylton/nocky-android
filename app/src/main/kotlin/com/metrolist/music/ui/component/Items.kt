@@ -447,15 +447,15 @@ fun GridItem(
     fillMaxWidth: Boolean = false,
 ) {
     val gridHeight = currentGridThumbnailHeight()
-    val cardShape = RoundedCornerShape(28.dp)
-    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.86f)
-    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.46f)
+    val cardShape = RoundedCornerShape(26.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
     val cardGlow =
         Brush.verticalGradient(
             listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.07f),
                 Color.Transparent,
-                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.06f),
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.04f),
             ),
         )
 
@@ -463,18 +463,18 @@ fun GridItem(
         modifier =
             if (fillMaxWidth) {
                 modifier
-                    .padding(horizontal = 8.dp, vertical = 10.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
                     .fillMaxWidth()
             } else {
                 modifier
-                    .padding(horizontal = 8.dp, vertical = 10.dp)
-                    .width(gridHeight * thumbnailRatio + 24.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .width(gridHeight * thumbnailRatio + 18.dp)
             }
                 .clip(cardShape)
                 .background(cardContainer, cardShape)
                 .background(cardGlow, cardShape)
                 .border(1.dp, cardBorder, cardShape)
-                .padding(12.dp)
+                .padding(10.dp)
     ) {
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
@@ -485,12 +485,12 @@ fun GridItem(
                     Modifier.height(gridHeight)
                 }
                     .aspectRatio(thumbnailRatio)
-                    .clip(RoundedCornerShape(20.dp)),
+                    .clip(RoundedCornerShape(18.dp)),
         ) {
             thumbnailContent()
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         title()
 
