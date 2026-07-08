@@ -408,47 +408,50 @@ fun BottomSheetPlayer(
     }
 
     val defaultGradientColors = listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant)
-    val fallbackColor = MaterialTheme.colorScheme.surface.toArgb()
+    val fallbackColor = MaterialTheme.colorScheme.primary.toArgb()
 
-    LaunchedEffect(mediaMetadata?.id, playerBackground) {
-        if (playerBackground == PlayerBackgroundStyle.GRADIENT) {
-            val currentMetadata = mediaMetadata
-            if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
-                val cachedColors = gradientColorsCache[currentMetadata.id]
-                if (cachedColors != null) {
-                    gradientColors = cachedColors
-                    return@LaunchedEffect
-                }
-                withContext(Dispatchers.IO) {
-                    val request =
-                        ImageRequest
-                            .Builder(context)
-                            .data(currentMetadata.thumbnailUrl)
-                            .size(100, 100)
-                            .allowHardware(false)
-                            .memoryCacheKey("gradient_${currentMetadata.id}")
-                            .build()
+    LaunchedEffect(mediaMetadata?.id) {
+        val currentMetadata = mediaMetadata
 
-                    val result = runCatching { context.imageLoader.execute(request) }.getOrNull()
-                    if (result != null) {
-                        val bitmap = result.image?.toBitmap()
-                        if (bitmap != null) {
-                            val palette =
-                                withContext(Dispatchers.Default) {
-                                    Palette
-                                        .from(bitmap)
-                                        .maximumColorCount(8)
-                                        .resizeBitmapArea(100 * 100)
-                                        .generate()
-                                }
-                            val extractedColors =
-                                PlayerColorExtractor.extractGradientColors(
-                                    palette = palette,
-                                    fallbackColor = fallbackColor,
-                                )
-                            gradientColorsCache[currentMetadata.id] = extractedColors
-                            withContext(Dispatchers.Main) { gradientColors = extractedColors }
+        if (currentMetadata != null && currentMetadata.thumbnailUrl != null) {
+            val cachedColors = gradientColorsCache[currentMetadata.id]
+            if (cachedColors != null) {
+                gradientColors = cachedColors
+                return@LaunchedEffect
+            }
+
+            withContext(Dispatchers.IO) {
+                val request =
+                    ImageRequest
+                        .Builder(context)
+                        .data(currentMetadata.thumbnailUrl)
+                        .size(160, 160)
+                        .allowHardware(false)
+                        .memoryCacheKey("nocky_accent_${currentMetadata.id}")
+                        .build()
+
+                val result = runCatching { context.imageLoader.execute(request) }.getOrNull()
+                val bitmap = result?.image?.toBitmap()
+
+                if (bitmap != null) {
+                    val palette =
+                        withContext(Dispatchers.Default) {
+                            Palette
+                                .from(bitmap)
+                                .maximumColorCount(16)
+                                .resizeBitmapArea(160 * 160)
+                                .generate()
                         }
+
+                    val extractedColors =
+                        PlayerColorExtractor.extractGradientColors(
+                            bitmap = bitmap,
+                            fallbackColor = fallbackColor,
+                        )
+
+                    gradientColorsCache[currentMetadata.id] = extractedColors
+                    withContext(Dispatchers.Main) {
+                        gradientColors = extractedColors
                     }
                 }
             }
@@ -477,6 +480,13 @@ fun BottomSheetPlayer(
         label = "icBackgroundColor",
     )
 
+    val nockyArtworkAccent = gradientColors.firstOrNull()
+    val nockyAccentColor = nockyArtworkAccent ?: MaterialTheme.colorScheme.primary
+
+    // Desktop-like tonal roles:
+    // - artwork accent stays vivid;
+    // - main play button becomes lighter;
+    // - side buttons become translucent/deeper.
     val (textButtonColor, iconButtonColor) =
         when {
             playerBackground == PlayerBackgroundStyle.BLUR ||
@@ -505,10 +515,11 @@ fun BottomSheetPlayer(
             else -> {
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
-                        Pair(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.onPrimary,
-                        )
+                        if (useDarkTheme) {
+                            Pair(Color.White, Color.Black)
+                        } else {
+                            Pair(Color.Black, Color.White)
+                        }
                     }
 
                     PlayerButtonsStyle.PRIMARY -> {
@@ -561,8 +572,8 @@ fun BottomSheetPlayer(
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         Pair(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.74f),
-                            MaterialTheme.colorScheme.onPrimaryContainer,
+                            MaterialTheme.colorScheme.surfaceContainerHighest,
+                            MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -945,8 +956,14 @@ fun BottomSheetPlayer(
 
             val playerInfoCardShape = RoundedCornerShape(30.dp)
             val playerInfoCardColor =
-                gradientColors.firstOrNull()?.copy(alpha = 0.82f)
-                    ?: MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f)
+                nockyArtworkAccent?.let { accent ->
+                    accent.copy(
+                        red = (accent.red * 0.82f).coerceIn(0f, 1f),
+                        green = (accent.green * 0.82f).coerceIn(0f, 1f),
+                        blue = (accent.blue * 0.82f).coerceIn(0f, 1f),
+                        alpha = 0.78f,
+                    )
+                } ?: MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f)
 
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
