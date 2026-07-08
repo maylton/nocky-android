@@ -29,8 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -130,17 +128,9 @@ fun MoodAndGenresButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cardShape = RoundedCornerShape(20.dp)
-    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f)
-    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
-    val cardGlow =
-        Brush.verticalGradient(
-            listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.07f),
-                Color.Transparent,
-                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.04f),
-            ),
-        )
+    val cardShape = RoundedCornerShape(18.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.26f)
 
     Box(
         contentAlignment = Alignment.CenterStart,
@@ -149,14 +139,13 @@ fun MoodAndGenresButton(
             .height(MoodAndGenresButtonHeight)
             .clip(cardShape)
             .background(cardContainer, cardShape)
-            .background(cardGlow, cardShape)
             .border(
                 width = 1.dp,
                 color = cardBorder,
                 shape = cardShape,
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp),
+            .padding(horizontal = 20.dp),
     ) {
         Text(
             text = title,
@@ -168,4 +157,4 @@ fun MoodAndGenresButton(
     }
 }
 
-val MoodAndGenresButtonHeight = 58.dp
+val MoodAndGenresButtonHeight = 56.dp
