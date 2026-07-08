@@ -30,6 +30,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -318,6 +319,7 @@ fun BottomSheetPlayer(
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val queueTitle by playerConnection.queueTitle.collectAsStateWithLifecycle()
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     val automix by playerConnection.service.automixItems.collectAsStateWithLifecycle()
     val repeatMode by playerConnection.repeatMode.collectAsStateWithLifecycle()
@@ -503,11 +505,10 @@ fun BottomSheetPlayer(
             else -> {
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
-                        if (useDarkTheme) {
-                            Pair(Color.White, Color.Black)
-                        } else {
-                            Pair(Color.Black, Color.White)
-                        }
+                        Pair(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.onPrimary,
+                        )
                     }
 
                     PlayerButtonsStyle.PRIMARY -> {
@@ -560,8 +561,8 @@ fun BottomSheetPlayer(
                 when (playerButtonsStyle) {
                     PlayerButtonsStyle.DEFAULT -> {
                         Pair(
-                            MaterialTheme.colorScheme.surfaceContainerHighest,
-                            MaterialTheme.colorScheme.onSurface,
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.74f),
+                            MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
 
@@ -942,13 +943,29 @@ fun BottomSheetPlayer(
                 label = "playPauseRoundness",
             )
 
+            val playerInfoCardShape = RoundedCornerShape(30.dp)
+            val playerInfoCardColor =
+                gradientColors.firstOrNull()?.copy(alpha = 0.82f)
+                    ?: MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f)
+
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = PlayerHorizontalPadding),
+                        .padding(horizontal = PlayerHorizontalPadding)
+                        .clip(playerInfoCardShape)
+                        .background(
+                            color = playerInfoCardColor,
+                            shape = playerInfoCardShape,
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+                            shape = playerInfoCardShape,
+                        )
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 AnimatedContent(
                     targetState = showInlineLyrics,
@@ -1118,6 +1135,19 @@ fun BottomSheetPlayer(
                                 )
                             }
                         }
+                    }
+
+                    val playerSource = queueTitle ?: mediaMetadata.album?.title
+                    if (!playerSource.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = playerSource,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextBackgroundColor.copy(alpha = 0.68f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp),
+                        )
                     }
                 }
 

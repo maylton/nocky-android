@@ -298,28 +298,55 @@ inline fun ListItem(
     isActive: Boolean = false,
     isAvailable: Boolean = true,
 ) {
+    val listItemShape = RoundedCornerShape(18.dp)
+    val listItemBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.26f)
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = if (isActive) {
             modifier // playing highlight
                 .height(ListItemHeight)
-                .padding(horizontal = 8.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+                .clip(listItemShape)
                 .background(
-                    color = // selected active
-                        if (isSelected == true) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                        else MaterialTheme.colorScheme.secondaryContainer
+                    color =
+                        if (isSelected == true) MaterialTheme.colorScheme.primary.copy(alpha = 0.36f)
+                        else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.82f),
+                    shape = listItemShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.34f),
+                    shape = listItemShape,
                 )
         } else if (isSelected == true) {
             modifier // inactive selected
                 .height(ListItemHeight)
-                .padding(horizontal = 8.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.4f))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+                .clip(listItemShape)
+                .background(
+                    color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.30f),
+                    shape = listItemShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                    shape = listItemShape,
+                )
         } else {
             modifier // default
                 .height(ListItemHeight)
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+                .clip(listItemShape)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f),
+                    shape = listItemShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = listItemBorder,
+                    shape = listItemShape,
+                )
         }
     ) {
         Box(
@@ -494,7 +521,10 @@ fun GridItem(
 
         title()
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.height(40.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
             badges()
 
             subtitle()
