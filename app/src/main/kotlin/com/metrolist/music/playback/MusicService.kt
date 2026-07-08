@@ -255,6 +255,7 @@ import java.util.Collections
 
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
+private const val ACTION_NOTIFICATION_DISMISSED = "com.metrolist.music.action.NOTIFICATION_DISMISSED"
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -452,6 +453,7 @@ class MusicService :
 
     @Volatile
     private var latestMediaNotification: Notification? = null
+    private var notificationDismissedWhilePaused = false
 
     private var scrobbleManager: ScrobbleManager? = null
 
@@ -647,6 +649,15 @@ class MusicService :
                             onNotificationChangedCallback.onNotificationChanged(notification)
                         }
 
+                    val dismissIntent =
+                        PendingIntent.getService(
+                            this@MusicService,
+                            1,
+                            Intent(this@MusicService, MusicService::class.java)
+                                .setAction(ACTION_NOTIFICATION_DISMISSED),
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                        )
+
                     return defaultMediaNotificationProvider
                         .createNotification(
                             mediaSession,
@@ -654,6 +665,7 @@ class MusicService :
                             actionFactory,
                             trackingCallback,
                         ).also { mediaNotification ->
+                            mediaNotification.notification.deleteIntent = dismissIntent
                             latestMediaNotification = mediaNotification.notification
                         }
                 }
@@ -2681,6 +2693,7 @@ class MusicService :
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
             updateWidgetUI(player.isPlaying)
             if (player.isPlaying) {
+                notificationDismissedWhilePaused = false
                 discordIntentionalDisconnect = false
                 screenOffHandler.removeCallbacks(screenOffTimeout)
                 screenOffHandler.removeCallbacks(pauseTimeout)
@@ -3986,6 +3999,15 @@ class MusicService :
             .build()
     }
 
+    private fun removePlayerNotification() {
+        runCatching {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        }
+        runCatching {
+            getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
+        }
+    }
+
     private fun startForegroundSafely(
         notification: Notification,
         deniedMessage: String,
@@ -4074,37 +4096,33 @@ class MusicService :
     override fun onBind(intent: Intent?) = super.onBind(intent) ?: binder
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (dataStore.get(StopMusicOnTaskClearKey, false)) {
-            if (!::player.isInitialized) {
-                stopSelf()
-                return
-            }
-            // Remote playback (Cast) is independent of the local ExoPlayer; ending the session
-            // is required or audio keeps playing on the Cast device.
-            runCatching {
-                if (castConnectionHandler?.isCasting?.value == true) {
-                    castConnectionHandler?.disconnect()
-                }
-                player.stop()
-                ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-                controllerFuture?.let { MediaController.releaseFuture(it) }
-                controllerFuture = null
-                // Media3: coordinates notification/foreground teardown and stopSelf; required when
-                // playback was ongoing (default super.onTaskRemoved keeps the service alive).
-                pauseAllPlayersAndStopSelf()
-            }.onFailure { e ->
-                Timber.tag(TAG).e(e, "Failed to stop playback on task clear")
-                controllerFuture?.let { MediaController.releaseFuture(it) }
-                controllerFuture = null
-                runCatching { pauseAllPlayersAndStopSelf() }.onFailure { stopSelf() }
-            }
+        notificationDismissedWhilePaused = true
+
+        if (!::player.isInitialized) {
+            removePlayerNotification()
+            stopSelf()
             return
         }
-        super.onTaskRemoved(rootIntent)
-        // User removed the task while paused: drop foreground promotion so the process can idle.
-        // Queue/state remain persisted; opening the app restores playback as usual.
-        if (::player.isInitialized && !player.isPlaying) {
-            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_DETACH)
+
+        runCatching {
+            if (castConnectionHandler?.isCasting?.value == true) {
+                castConnectionHandler?.disconnect()
+            }
+
+            player.pause()
+            player.stop()
+            removePlayerNotification()
+
+            controllerFuture?.let { MediaController.releaseFuture(it) }
+            controllerFuture = null
+
+            pauseAllPlayersAndStopSelf()
+        }.onFailure { e ->
+            Timber.tag(TAG).e(e, "Failed to stop playback on task clear")
+            removePlayerNotification()
+            controllerFuture?.let { MediaController.releaseFuture(it) }
+            controllerFuture = null
+            runCatching { pauseAllPlayersAndStopSelf() }.onFailure { stopSelf() }
         }
     }
 
@@ -4114,6 +4132,11 @@ class MusicService :
         session: MediaSession,
         startInForegroundRequired: Boolean,
     ) {
+        if (::player.isInitialized && !player.isPlaying && notificationDismissedWhilePaused) {
+            removePlayerNotification()
+            return
+        }
+
         try {
             super.onUpdateNotification(session, startInForegroundRequired)
         } catch (e: ForegroundServiceStartNotAllowedException) {
@@ -4132,6 +4155,14 @@ class MusicService :
         flags: Int,
         startId: Int,
     ): Int {
+        if (intent?.action == ACTION_NOTIFICATION_DISMISSED) {
+            if (::player.isInitialized && !player.isPlaying) {
+                notificationDismissedWhilePaused = true
+                removePlayerNotification()
+            }
+            return START_NOT_STICKY
+        }
+
         // On Android O+, every startForegroundService() call requires
         // Service.startForeground() to be called within a short timeout.
         // Some OEMs (e.g. MIUI) strictly enforce this even when the
