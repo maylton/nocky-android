@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -556,11 +557,29 @@ private fun ThumbnailItem(
             },
         contentAlignment = Alignment.Center
     ) {
+        val artworkFrameShape = RoundedCornerShape(dimensions.cornerRadius + 10.dp)
+        val artworkImageShape = RoundedCornerShape(dimensions.cornerRadius)
+
         Box(
             modifier = Modifier
                 .size(dimensions.thumbnailSize)
-                .clip(RoundedCornerShape(dimensions.cornerRadius))
+                .clip(artworkFrameShape)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.74f),
+                    shape = artworkFrameShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.44f),
+                    shape = artworkFrameShape,
+                )
+                .padding(8.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(artworkImageShape)
+            ) {
             if (hidePlayerThumbnail) {
                 HiddenThumbnailPlaceholder(textBackgroundColor = textBackgroundColor)
             } else {
@@ -583,6 +602,7 @@ private fun ThumbnailItem(
                     .padding(8.dp),
                 tintColor = textBackgroundColor
             )
+            }
         }
     }
 }

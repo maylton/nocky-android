@@ -1217,7 +1217,6 @@ fun HomeScreen(
                     item(key = "chips_shimmer") {
                         ShimmerHost(showGradient = false) {
                             LazyRow(
-                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1252,7 +1251,6 @@ fun HomeScreen(
 
                         item(key = "00_your_shows_list") {
                             LazyRow(
-                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1278,7 +1276,6 @@ fun HomeScreen(
 
                         item(key = "00_episodes_for_later_list") {
                             LazyRow(
-                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1302,7 +1299,6 @@ fun HomeScreen(
 
                         item(key = "0_podcast_channels_list") {
                             LazyRow(
-                                modifier = Modifier.padding(bottom = 18.dp),
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1385,7 +1381,6 @@ fun HomeScreen(
 
                             item(key = "1_chip_section_list_${section.index}") {
                                 LazyRow(
-                                    modifier = Modifier.padding(bottom = 18.dp),
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)
@@ -1908,7 +1903,6 @@ fun HomeScreen(
 
                                 item(key = "community_playlists_content") {
                                     LazyRow(
-                                        modifier = Modifier.padding(bottom = 18.dp),
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     ) {
@@ -2092,7 +2086,6 @@ fun HomeScreen(
 
                                 item(key = "account_playlists_list") {
                                     LazyRow(
-                                        modifier = Modifier.padding(bottom = 18.dp),
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2273,7 +2266,6 @@ fun HomeScreen(
 
                                 item(key = "similar_to_list_${section.index}") {
                                     LazyRow(
-                                        modifier = Modifier.padding(bottom = 18.dp),
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2450,7 +2442,6 @@ fun HomeScreen(
                                     // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
                                     item(key = "home_section_list_${section.index}") {
                                         LazyRow(
-                                            modifier = Modifier.padding(bottom = 18.dp),
                                             contentPadding =
                                                 WindowInsets.systemBars
                                                     .only(WindowInsetsSides.Horizontal)
@@ -2484,7 +2475,6 @@ fun HomeScreen(
                                 }
                                 item(key = "mood_and_genres_list") {
                                     LazyHorizontalGrid(
-                                        modifier = Modifier.padding(bottom = 18.dp),
                                         rows = GridCells.Fixed(4),
                                         contentPadding = PaddingValues(6.dp),
                                         modifier =
@@ -2526,7 +2516,6 @@ fun HomeScreen(
                                             .width(250.dp),
                                 )
                                 LazyRow(
-                                    modifier = Modifier.padding(bottom = 18.dp),
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)
