@@ -410,7 +410,13 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f), CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_widget_play),
@@ -431,7 +437,13 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f), CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.radio),
@@ -491,7 +503,13 @@ fun CommunityPlaylistCard(
                     modifier =
                         Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f), CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
                 ) {
                     Icon(
                         painter = painterResource(if (isBookmarked) R.drawable.library_add_check else R.drawable.library_add),
