@@ -7,6 +7,7 @@ package com.metrolist.music.ui.screens
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -127,23 +130,42 @@ fun MoodAndGenresButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cardShape = RoundedCornerShape(20.dp)
+    val cardContainer = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f)
+    val cardBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f)
+    val cardGlow =
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.07f),
+                Color.Transparent,
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.04f),
+            ),
+        )
+
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier =
         modifier
             .height(MoodAndGenresButtonHeight)
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clip(cardShape)
+            .background(cardContainer, cardShape)
+            .background(cardGlow, cardShape)
+            .border(
+                width = 1.dp,
+                color = cardBorder,
+                shape = cardShape,
+            )
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 18.dp),
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-val MoodAndGenresButtonHeight = 48.dp
+val MoodAndGenresButtonHeight = 58.dp
